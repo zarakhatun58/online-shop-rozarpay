@@ -15,6 +15,7 @@ type User = {
   username: string
   email: string
   profilePic?: string | null
+   address?: string
 }
 
 type AuthState = {

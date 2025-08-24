@@ -80,27 +80,16 @@ export async function getMyOrders(token: string) {
 }
 
 // ---------- PAYMENTS (Razorpay example) ----------
-export async function createRazorpayOrder(
-  token: string,
-  payload: { amount: number; currency?: string; receipt?: string }
-) {
-  const { data } = await axios.post(`${API_URL}/api/payments/razorpay/order`, payload, {
+export async function createStripeOrder(token: string, payload: { items: any[]; amount: number; address: string }) {
+  const { data } = await axios.post(`${API_URL}/api/payments`, payload, {
     headers: { Authorization: `Bearer ${token}` },
-  })
-  return data
+  });
+  return data; // { order, clientSecret }
 }
 
-export async function verifyRazorpaySignature(
-  token: string,
-  payload: { 
-    razorpay_order_id: string;
-     razorpay_payment_id: string; 
-     razorpay_signature: string; 
-     server_order_id?: string 
-    }
-) {
-  const { data } = await axios.post(`${API_URL}/api/payments/razorpay/verify`, payload, {
+export async function updateOrderPaymentStatus(token: string, payload: { orderId: string; paymentId: string; status: string }) {
+  const { data } = await axios.put(`${API_URL}/api/payments/payment`, payload, {
     headers: { Authorization: `Bearer ${token}` },
-  })
-  return data
+  });
+  return data;
 }

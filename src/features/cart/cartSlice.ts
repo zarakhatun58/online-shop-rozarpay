@@ -32,7 +32,7 @@ const cartSlice = createSlice({
       } else {
         state.items.push({ ...action.payload, qty: 1 })
       }
-      localStorage.setItem("cart", JSON.stringify(state.items)) // ✅ persist
+      localStorage.setItem("cart", JSON.stringify(state.items)) 
     },
     removeFromCart: (state, action: PayloadAction<string>) => {
       const i = findIndex(state.items, action.payload)

@@ -1,48 +1,67 @@
-import { useSelector } from 'react-redux'
-import { selectCart, selectCartTotal } from '../features/cart/cartSlice'
+import { useDispatch, useSelector } from 'react-redux'
+import { clearCart, selectCart, selectCartTotal } from '../features/cart/cartSlice'
 import { Button } from '../components/ui/Button';
 import { selectAuth } from '@/features/auth/authSlice';
-import { loadRazorpay } from '@/lib/razorpay';
-import { createRazorpayOrder, verifyRazorpaySignature } from '@/lib/api';
-import { RazorpayOptions } from './../lib/razorpay.d';
+import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { useState } from 'react';
+import { createStripeOrder, updateOrderPaymentStatus } from '@/lib/api';
 
 export default function CheckoutPage() {
-  const items = useSelector(selectCart)
-  const total = useSelector(selectCartTotal)
+ const items = useSelector(selectCart);
+  const total = useSelector(selectCartTotal);
   const { token, user } = useSelector(selectAuth);
+  const dispatch = useDispatch();
+  const stripe = useStripe();
+  const elements = useElements();
+  const [loading, setLoading] = useState(false);
 
 const handleCheckout = async () => {
   if (!token) {
-    alert("You must be logged in to checkout.");
-    return; // stop execution if token is null
-  }
-
-  const ok = await loadRazorpay();
-  if (!ok) {
-    alert("Failed to load Razorpay SDK");
+    alert("Please login to checkout");
     return;
   }
 
-  const { order, key } = await createRazorpayOrder(token, { amount: total * 100 });
+  setLoading(true);
 
-  const options: RazorpayOptions = {
-    key,
-    amount: order.amount,
-    currency: order.currency,
-    name: "Cosmetic Shop",
-    description: `Order ${order.receipt}`,
-    order_id: order.id,
-    handler: async (response) => {
-      await verifyRazorpaySignature(token, response);
+  try {
+    const { order, clientSecret } = await createStripeOrder(token, {
+      items,
+      amount: total,
+      address: user?.address ?? "Not provided",
+    });
+
+    if (!stripe || !elements) return;
+
+    const cardElement = elements.getElement(CardElement);
+    if (!cardElement) {
+      alert("Card element not found");
+      setLoading(false);
+      return;
+    }
+
+    const result = await stripe.confirmCardPayment(clientSecret, {
+      payment_method: { card: cardElement },
+    });
+
+    if (result.error) {
+      alert(result.error.message);
+    } else if (result.paymentIntent?.status === "succeeded") {
+
+      await updateOrderPaymentStatus(token, {
+        orderId: order.payment.orderId,
+        paymentId: result.paymentIntent.id,
+        status: "paid",
+      });
       alert("Payment successful! 🎉");
-    },
-    theme: { color: "#f43f5e" },
-  };
+     dispatch(clearCart());
+    }
+  } catch (err: unknown) {
+    if (err instanceof Error) alert(err.message);
+    else alert("Payment failed");
+  }
 
-  const rzp = new window.Razorpay(options);
-  rzp.open();
+  setLoading(false);
 };
-
 
 
   return (
