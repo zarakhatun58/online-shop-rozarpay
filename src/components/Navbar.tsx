@@ -1,4 +1,4 @@
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useState } from "react";
 import { selectCart } from "../features/cart/cartSlice";
@@ -11,7 +11,7 @@ export default function Navbar() {
   const items = useSelector(selectCart);
   const auth = useSelector(selectAuth);
   const count = items.reduce((s, i) => s + i.qty, 0);
-
+const navigate = useNavigate();
   return (
     <header className="sticky top-0 z-20 bg-[#ed3b5f] text-white shadow-md px-6">
       <div className="container flex h-16 items-center gap-4">
@@ -47,7 +47,7 @@ export default function Navbar() {
             variant="ghost"
             aria-label="Open cart"
             className="relative text-white hover:bg-white/20"
-            onClick={() => (window.location.href = "/cart")}
+            onClick={() => navigate("/cart")}
           >
             🛒
             {count > 0 && (
