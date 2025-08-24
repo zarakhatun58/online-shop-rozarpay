@@ -1,0 +1,106 @@
+import axios from "axios"
+import type { Product } from "./types"
+
+const API_URL ="https://online-shop-server-hy92.onrender.com"
+
+// ---------- PRODUCTS ----------
+
+export async function getProducts(query?: string): Promise<Product[]> {
+  const { data } = await axios.get(`${API_URL}/api/products`, {
+    params: query ? { q: query } : {}
+  })
+  return data
+}
+
+export async function getProductById(id: string): Promise<Product> {
+  const { data } = await axios.get(`${API_URL}/api/products/${id}`)
+  return data
+}
+
+// ---------- AUTH ----------
+export async function registerUser(payload: {
+  username?: string
+  email: string
+  password: string
+}) {
+  const { data } = await axios.post(`${API_URL}/api/auth/register`, payload)
+  return data
+}
+
+export async function loginUser(payload: {
+  email: string
+  password: string
+}) {
+  const { data } = await axios.post(`${API_URL}/api/auth/login`, payload)
+  return data
+}
+
+export async function logoutUser() {
+  const { data } = await axios.post(`${API_URL}/api/auth/logout`)
+  return data
+}
+
+export async function getProfile(token: string) {
+  const { data } = await axios.get(`${API_URL}/api/auth/profile`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  return data
+}
+
+export async function forgotPassword(payload: { email: string }) {
+  const { data } = await axios.post(`${API_URL}/api/auth/forgot-password`, payload)
+  return data
+}
+
+export async function resetPassword(payload: {
+  token: string
+  newPassword: string
+}) {
+  const { data } = await axios.post(`${API_URL}/api/auth/reset-password`, payload)
+  return data
+}
+
+
+// ---------- ORDERS ----------
+export async function createOrder(
+  token: string,
+  payload: { items: { product: string; qty: number }[]; amount: number; address: string }
+) {
+  const { data } = await axios.post(`${API_URL}/api/orders`, payload, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  return data
+}
+
+export async function getMyOrders(token: string) {
+  const { data } = await axios.get(`${API_URL}/api/orders/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  return data
+}
+
+// ---------- PAYMENTS (Razorpay example) ----------
+export async function createRazorpayOrder(
+  token: string,
+  payload: { amount: number; currency?: string; receipt?: string }
+) {
+  const { data } = await axios.post(`${API_URL}/api/payments/razorpay/order`, payload, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  return data
+}
+
+export async function verifyRazorpaySignature(
+  token: string,
+  payload: { 
+    razorpay_order_id: string;
+     razorpay_payment_id: string; 
+     razorpay_signature: string; 
+     server_order_id?: string 
+    }
+) {
+  const { data } = await axios.post(`${API_URL}/api/payments/razorpay/verify`, payload, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  return data
+}
