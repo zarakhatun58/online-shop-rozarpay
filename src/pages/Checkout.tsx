@@ -4,7 +4,8 @@ import { Button } from '../components/ui/Button';
 import { selectAuth } from '@/features/auth/authSlice';
 import {  CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { useState } from 'react';
-import { createStripeOrder, updateOrderPaymentStatus } from '@/lib/api';
+import { createStripeCheckoutSession, createStripeOrder, updateOrderPaymentStatus } from '@/lib/api';
+import { stripePromise } from '@/App';
 
 export default function CheckoutPage() {
  const items = useSelector(selectCart);
@@ -16,67 +17,45 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
 
 const handleCheckout = async () => {
-  if (!token) {
-    alert("Please login to checkout");
-    return;
-  }
-
-  if (!items.length) {
-    alert("Your cart is empty");
-    return;
-  }
-
-  setLoading(true);
-
-  try {
-    // 1️⃣ Create PaymentIntent on backend
-    const { order, clientSecret } = await createStripeOrder(token, {
-      items,
-      amount: Math.round(total * 100), // Stripe expects amount in cents
-      address: user?.address ?? "Not provided",
-    });
-
-    // 2️⃣ Make sure Stripe is loaded
-    if (!stripe || !elements) {
-      alert("Stripe is not loaded yet. Please try again.");
-      setLoading(false);
+    if (!token) {
+      alert("Please login to checkout");
       return;
     }
 
-    // 3️⃣ Get CardElement from Elements provider
-    const cardElement = elements.getElement(CardElement);
-    if (!cardElement) {
-      alert("Card input not found. Please reload the page.");
-      setLoading(false);
+    if (!items.length) {
+      alert("Your cart is empty!");
       return;
     }
 
-    // 4️⃣ Confirm card payment
-    const result = await stripe.confirmCardPayment(clientSecret, {
-      payment_method: { card: cardElement },
-    });
+    setLoading(true);
 
-    // 5️⃣ Handle result
-    if (result.error) {
-      alert(result.error.message);
-    } else if (result.paymentIntent?.status === "succeeded") {
-      // Update payment status in backend
-      await updateOrderPaymentStatus(token, {
-        orderId: order.payment.orderId,
-        paymentId: result.paymentIntent.id,
-        status: "paid",
+    try {
+      // 1️⃣ Create Stripe Checkout session
+      const { sessionId } = await createStripeCheckoutSession(token, {
+        items,
+        amount: Math.round(total * 100), // Stripe expects amount in cents
+        address: user?.address ?? "Not provided",
+         email: user?.email ?? "no-email@example.com",
       });
 
-      alert("Payment successful! 🎉");
-      dispatch(clearCart());
-    }
-  } catch (err: unknown) {
-    if (err instanceof Error) alert(err.message);
-    else alert("Payment failed. Please try again.");
-  }
+      // 2️⃣ Redirect to Stripe Checkout
+      const stripe = await stripePromise;
+      if (!stripe) {
+        alert("Stripe failed to load");
+        setLoading(false);
+        return;
+      }
 
-  setLoading(false);
-};
+      const { error } = await stripe.redirectToCheckout({ sessionId });
+      if (error) {
+        alert(error.message);
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.error || err.message || "Checkout failed");
+    }
+
+    setLoading(false);
+  };
 
 
   return (
