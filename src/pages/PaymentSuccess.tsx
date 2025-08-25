@@ -2,7 +2,6 @@ import { selectAuth } from '@/features/auth/authSlice';
 import { clearCart } from '@/features/cart/cartSlice';
 import { updateOrderPaymentStatus } from '@/lib/api';
 import React, { useEffect } from 'react';
-import toast from 'react-hot-toast';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
@@ -23,7 +22,7 @@ const PaymentSuccess = () => {
         status: 'paid',
       }).then(() => {
         dispatch(clearCart()); // clear cart
-        toast.success('Payment successful! 🎉');
+        alert('Payment successful! 🎉');
         navigate('/orders'); // redirect to orders page
       });
     }

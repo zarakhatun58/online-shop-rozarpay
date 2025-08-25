@@ -30,6 +30,7 @@ export default function SignInDialog() {
     e.preventDefault()
     try {
       await dispatch(login({ email, password }))
+      alert("Login successful! 🎉");
       setOpen(false)
     } catch (err) {
       console.error(err)
@@ -41,6 +42,7 @@ export default function SignInDialog() {
     e.preventDefault()
     try {
       await dispatch(register({ username, email, password }))
+       alert("Signup successful! 🎉");
       setOpen(false)
     } catch (err) {
       console.error(err)
