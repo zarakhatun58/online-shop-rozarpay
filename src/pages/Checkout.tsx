@@ -2,7 +2,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { clearCart, selectCart, selectCartTotal } from '../features/cart/cartSlice'
 import { Button } from '../components/ui/Button';
 import { selectAuth } from '@/features/auth/authSlice';
-import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import {  CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { useState } from 'react';
 import { createStripeOrder, updateOrderPaymentStatus } from '@/lib/api';
 
