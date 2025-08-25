@@ -79,7 +79,17 @@ export async function getMyOrders(token: string) {
   return data
 }
 
-// ---------- PAYMENTS (Razorpay example) ----------
+// ---------- PAYMENTS (stripe example) ----------
+export async function createStripeCheckoutSession(
+  token: string,
+  payload: { items: any[]; amount: number; address: string; email: string }
+) {
+  const { data } = await axios.post(`${API_URL}/api/payments/checkout`, payload, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return data; 
+}
+
 export async function createStripeOrder(token: string, payload: { items: any[]; amount: number; address: string }) {
   const { data } = await axios.post(`${API_URL}/api/payments`, payload, {
     headers: { Authorization: `Bearer ${token}` },
@@ -89,6 +99,13 @@ export async function createStripeOrder(token: string, payload: { items: any[]; 
 
 export async function updateOrderPaymentStatus(token: string, payload: { orderId: string; paymentId: string; status: string }) {
   const { data } = await axios.put(`${API_URL}/api/payments/payment`, payload, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return data;
+}
+
+export async function getOrders(token: string) {
+  const { data } = await axios.get(`${API_URL}/api/payments/all`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return data;

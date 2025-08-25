@@ -21,43 +21,58 @@ const handleCheckout = async () => {
     return;
   }
 
+  if (!items.length) {
+    alert("Your cart is empty");
+    return;
+  }
+
   setLoading(true);
 
   try {
+    // 1️⃣ Create PaymentIntent on backend
     const { order, clientSecret } = await createStripeOrder(token, {
       items,
-      amount: total,
+      amount: Math.round(total * 100), // Stripe expects amount in cents
       address: user?.address ?? "Not provided",
     });
 
-    if (!stripe || !elements) return;
-
-    const cardElement = elements.getElement(CardElement);
-    if (!cardElement) {
-      alert("Card element not found");
+    // 2️⃣ Make sure Stripe is loaded
+    if (!stripe || !elements) {
+      alert("Stripe is not loaded yet. Please try again.");
       setLoading(false);
       return;
     }
 
+    // 3️⃣ Get CardElement from Elements provider
+    const cardElement = elements.getElement(CardElement);
+    if (!cardElement) {
+      alert("Card input not found. Please reload the page.");
+      setLoading(false);
+      return;
+    }
+
+    // 4️⃣ Confirm card payment
     const result = await stripe.confirmCardPayment(clientSecret, {
       payment_method: { card: cardElement },
     });
 
+    // 5️⃣ Handle result
     if (result.error) {
       alert(result.error.message);
     } else if (result.paymentIntent?.status === "succeeded") {
-
+      // Update payment status in backend
       await updateOrderPaymentStatus(token, {
         orderId: order.payment.orderId,
         paymentId: result.paymentIntent.id,
         status: "paid",
       });
+
       alert("Payment successful! 🎉");
-     dispatch(clearCart());
+      dispatch(clearCart());
     }
   } catch (err: unknown) {
     if (err instanceof Error) alert(err.message);
-    else alert("Payment failed");
+    else alert("Payment failed. Please try again.");
   }
 
   setLoading(false);
@@ -80,9 +95,11 @@ const handleCheckout = async () => {
           </ul>
         )}
         <div className="flex justify-between border-t mt-3 mb-4 pt-3 font-semibold">
-          <span>Total</span><span>₹{total}</span>
+          <span>Total</span><span>₹{total.toFixed(2)}</span>
         </div>
-        <Button onClick={handleCheckout}>Pay Now</Button>
+         <Button onClick={handleCheckout} disabled={loading}>
+          {loading ? "Processing..." : "Pay Now"}
+        </Button>
       </div>
     </section>
   )
