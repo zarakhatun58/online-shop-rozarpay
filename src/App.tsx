@@ -6,6 +6,9 @@ import Layout from './components/Layout'
 import ProductDetails from './pages/ProductDetails'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements } from '@stripe/react-stripe-js'
+import PaymentCancel from './pages/PaymentCancel'
+import PaymentSuccess from './pages/PaymentSuccess'
+import OrdersPage from './pages/OrdersPage'
 
 export const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
@@ -32,6 +35,9 @@ export default function App() {
           }
         />
         <Route path="/product/:id" element={<ProductDetails />} />
+        <Route path="/payment-success" element={<PaymentSuccess />} />
+        <Route path="/payment-cancelled" element={<PaymentCancel />} />
+        <Route path="/orders" element={<OrdersPage />} />
       </Routes>
     </Layout>
   )

@@ -5,6 +5,7 @@ import { CardElement, useElements, useStripe } from "@stripe/react-stripe-js"
 import { useState } from "react"
 import { selectAuth } from "@/features/auth/authSlice"
 import { createStripeOrder, updateOrderPaymentStatus } from "@/lib/api"
+import { useNavigate } from "react-router-dom"
 
 export default function CartDrawer() {
   const dispatch = useDispatch()
@@ -13,6 +14,7 @@ export default function CartDrawer() {
   const { token, user } = useSelector(selectAuth);
     const stripe = useStripe();
     const elements = useElements();
+    const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
 
   const handleCheckout = async () => {
@@ -115,7 +117,8 @@ export default function CartDrawer() {
         <Button onClick={() => dispatch(clearCart())} variant="outline">
           Clear Cart
         </Button>
-        <Button>Proceed to Checkout</Button>
+        <Button  onClick={() => navigate("/checkout")}>Proceed to Checkout</Button>
+        
       </div>
     </div>
   )

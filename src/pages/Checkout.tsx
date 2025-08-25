@@ -33,7 +33,7 @@ const handleCheckout = async () => {
       // 1️⃣ Create Stripe Checkout session
       const { sessionId } = await createStripeCheckoutSession(token, {
         items,
-        amount: Math.round(total * 100), // Stripe expects amount in cents
+        amount: Math.round(total * 100), 
         address: user?.address ?? "Not provided",
          email: user?.email ?? "no-email@example.com",
       });
