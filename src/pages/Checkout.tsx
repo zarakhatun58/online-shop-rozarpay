@@ -5,7 +5,6 @@ import { selectAuth } from '@/features/auth/authSlice';
 import { useState } from 'react';
 import { createStripeCheckoutSession } from '@/lib/api';
 import { stripePromise } from '@/App';
-import { toast } from 'sonner';
 
 export default function CheckoutPage() {
  const items = useSelector(selectCart);
@@ -15,12 +14,12 @@ export default function CheckoutPage() {
 
 const handleCheckout = async () => {
     if (!token) {
-      toast("Please login to checkout");
+      alert("Please login to checkout");
       return;
     }
 
     if (!items.length) {
-      toast("Your cart is empty!");
+      alert("Your cart is empty!");
       return;
     }
 
@@ -38,17 +37,17 @@ const handleCheckout = async () => {
       // 2️⃣ Redirect to Stripe Checkout
       const stripe = await stripePromise;
       if (!stripe) {
-        toast("Stripe failed to load");
+        alert("Stripe failed to load");
         setLoading(false);
         return;
       }
 
       const { error } = await stripe.redirectToCheckout({ sessionId });
       if (error) {
-        toast(error.message);
+        alert(error.message);
       }
     } catch (err: any) {
-      toast(err.response?.data?.error || err.message || "Checkout failed");
+      alert(err.response?.data?.error || err.message || "Checkout failed");
     }
 
     setLoading(false);

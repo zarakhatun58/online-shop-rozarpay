@@ -13,7 +13,6 @@ import {
 } from "@/features/notification/notificationSlice";
 import { AppDispatch, RootState } from "@/store";
 import { useDispatch, useSelector } from "react-redux";
-import { toast } from "sonner";
 
 interface Notification {
   id: string;
@@ -56,8 +55,8 @@ const { notifications } = useSelector((state: RootState) => state.notifications)
  const handleNotification = (notification: Notification) => {
     console.log("🔔 Received notification:", notification);
 
-    // Show toast
-    toast(notification.title);
+    // Show alert
+    alert(notification.title);
 
     // Browser Notification API
     if (Notification.permission === "granted") {

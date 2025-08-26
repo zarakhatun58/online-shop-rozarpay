@@ -16,7 +16,6 @@ import { Label } from "./ui/label"
 import { Input } from "./ui/input"
 import PhoneInput from "react-phone-input-2"
 import "react-phone-input-2/lib/style.css"
-import { toast } from 'sonner';
 import { useSocket } from "@/lib/SocketProvider"
 
 
@@ -53,7 +52,7 @@ export default function SignInDialog() {
     if (Object.keys(errors).length > 0) return
     try {
       await dispatch(login({ email, password }))
-      toast("✅ Login successful! 🎉");
+      alert("✅ Login successful! 🎉");
       const user = JSON.parse(localStorage.getItem("user") || "{}");
     const userId = user?.id || user?._id;
     if (userId) connectSocket(userId);
@@ -75,7 +74,7 @@ export default function SignInDialog() {
     if (Object.keys(errors).length > 0) return
     try {
       await dispatch(register({ username, email, password }))
-      toast("Signup successful! 🎉");
+      alert("Signup successful! 🎉");
       const user = JSON.parse(localStorage.getItem("user") || "{}");
     const userId = user?.id || user?._id;
     if (userId) connectSocket(userId);
@@ -88,20 +87,20 @@ export default function SignInDialog() {
     e.preventDefault();
     try {
       await dispatch(forgotPasswordAction({ phone })).unwrap();
-      toast("OTP sent to your phone. Enter OTP to continue.");
+      alert("OTP sent to your phone. Enter OTP to continue.");
       setOtpSent(true);
     } catch (err: any) {
-      toast(err || "Failed to send OTP");
+      alert(err || "Failed to send OTP");
     }
   };
 
   const handleVerifyOtp = async (): Promise<boolean> => {
     try {
       await dispatch(verifyOtpAction({ phone, otp })).unwrap()
-      toast("OTP verified successfully. You can now reset your password.")
+      alert("OTP verified successfully. You can now reset your password.")
       return true
     } catch (err: any) {
-      toast(err || "Invalid OTP. Please try again.")
+      alert(err || "Invalid OTP. Please try again.")
       return false
     }
   }
@@ -111,11 +110,11 @@ export default function SignInDialog() {
     e.preventDefault();
     try {
       await dispatch(resetPasswordAction({ phone, newPassword })).unwrap();
-      toast("Password reset successful. Please log in.");
+      alert("Password reset successful. Please log in.");
       setOtpSent(false);
       setOtpVerified(false);
     } catch (err: any) {
-      toast(err || "Failed to reset password");
+      alert(err || "Failed to reset password");
     }
   };
   return (
