@@ -8,6 +8,7 @@ import {
   getProfile,
   forgotPassword,
   resetPassword,
+  verifyOtp,
 } from "../../lib/api"
 
 type User = {
@@ -23,7 +24,9 @@ type AuthState = {
   user: User | null
   status: "idle" | "loading" | "succeeded" | "failed"
   error: string | null
+  otpVerified: boolean
 }
+
 const savedToken = localStorage.getItem("authToken")
 const savedUser = localStorage.getItem("authUser")
 
@@ -32,6 +35,7 @@ const initial: AuthState = {
   user: savedUser ? JSON.parse(savedUser) : null,
   status: "idle",
   error: null,
+  otpVerified: false,
 }
 
 // REGISTER
@@ -63,7 +67,7 @@ export const login = createAsyncThunk<
 // LOGOUT
 export const logout = createAsyncThunk("auth/logout", async () => {
   await logoutUser()
-  localStorage.removeItem("authToken")
+  // removal is handled in reducer as well
   return null
 })
 
@@ -83,37 +87,56 @@ export const fetchProfile = createAsyncThunk<
   }
 })
 
-
-// FORGOT PASSWORD
+// FORGOT PASSWORD (Send OTP) -- typed rejectValue so rejected payload is string
 export const forgotPasswordAction = createAsyncThunk<
   { message: string },
-  { email: string },
+  { phone: string },
   { rejectValue: string }
 >("auth/forgotPassword", async (payload, { rejectWithValue }) => {
   try {
     return await forgotPassword(payload)
   } catch (err: any) {
-    return rejectWithValue("Failed to send reset email")
+    return rejectWithValue(err.response?.data?.error || "Failed to send OTP")
+  }
+})
+
+// VERIFY OTP
+export const verifyOtpAction = createAsyncThunk<
+  { message: string },
+  { phone: string; otp: string },
+  { rejectValue: string }
+>("auth/verifyOtp", async (payload, { rejectWithValue }) => {
+  try {
+    return await verifyOtp(payload)
+  } catch (err: any) {
+    return rejectWithValue(err.response?.data?.error || "OTP verification failed")
   }
 })
 
 // RESET PASSWORD
 export const resetPasswordAction = createAsyncThunk<
   { message: string },
-  { token: string; newPassword: string },
+  { phone: string; newPassword: string },
   { rejectValue: string }
 >("auth/resetPassword", async (payload, { rejectWithValue }) => {
   try {
     return await resetPassword(payload)
   } catch (err: any) {
-    return rejectWithValue("Failed to reset password")
+    return rejectWithValue(err.response?.data?.error || "Reset password failed")
   }
 })
 
 const authSlice = createSlice({
   name: "auth",
   initialState: initial,
-  reducers: {},
+  reducers: {
+    clearError: (state) => {
+      state.error = null
+    },
+    resetOtpState: (state) => {
+      state.otpVerified = false
+    },
+  },
   extraReducers: (builder) => {
     builder
       // REGISTER
@@ -130,7 +153,7 @@ const authSlice = createSlice({
       })
       .addCase(register.rejected, (state, action) => {
         state.status = "failed"
-        state.error = action.payload || "Register failed"
+        state.error = action.payload ?? "Register failed"
       })
 
       // LOGIN
@@ -147,7 +170,7 @@ const authSlice = createSlice({
       })
       .addCase(login.rejected, (state, action) => {
         state.status = "failed"
-        state.error = action.payload || "Login failed"
+        state.error = action.payload ?? "Login failed"
       })
 
       // LOGOUT
@@ -169,28 +192,52 @@ const authSlice = createSlice({
       })
       .addCase(fetchProfile.rejected, (state, action) => {
         state.status = "failed"
-        state.error = action.payload || "Failed to load profile"
+        state.error = action.payload ?? "Failed to load profile"
       })
 
-      // FORGOT PASSWORD
+      // FORGOT PASSWORD (Send OTP)
+      .addCase(forgotPasswordAction.pending, (state) => {
+        state.status = "loading"
+        state.error = null
+      })
       .addCase(forgotPasswordAction.fulfilled, (state) => {
         state.status = "succeeded"
       })
       .addCase(forgotPasswordAction.rejected, (state, action) => {
         state.status = "failed"
-        state.error = action.payload || "Forgot password failed"
+        state.error = action.payload ?? "Forgot password failed"
+      })
+
+      // VERIFY OTP
+      .addCase(verifyOtpAction.pending, (state) => {
+        state.status = "loading"
+        state.error = null
+      })
+      .addCase(verifyOtpAction.fulfilled, (state) => {
+        state.status = "succeeded"
+        state.otpVerified = true
+      })
+      .addCase(verifyOtpAction.rejected, (state, action) => {
+        state.status = "failed"
+        state.error = action.payload ?? "OTP verification failed"
       })
 
       // RESET PASSWORD
+      .addCase(resetPasswordAction.pending, (state) => {
+        state.status = "loading"
+        state.error = null
+      })
       .addCase(resetPasswordAction.fulfilled, (state) => {
         state.status = "succeeded"
+        state.otpVerified = false // clear after reset
       })
       .addCase(resetPasswordAction.rejected, (state, action) => {
         state.status = "failed"
-        state.error = action.payload || "Reset password failed"
+        state.error = action.payload ?? "Reset password failed"
       })
   },
 })
 
+export const { clearError, resetOtpState } = authSlice.actions
 export const selectAuth = (state: RootState) => state.auth
 export default authSlice.reducer

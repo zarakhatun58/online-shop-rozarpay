@@ -3,23 +3,28 @@ import { useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { AppDispatch, RootState } from "@/store"
 import { Eye, EyeOff } from "lucide-react"
-import { selectAuth, logout, login, register, forgotPasswordAction, resetPasswordAction } from "@/features/auth/authSlice"
+import { selectAuth, logout, login, register, forgotPasswordAction, resetPasswordAction, verifyOtpAction } from "@/features/auth/authSlice"
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger
 } from "./ui/dialog"
 import {
   Tabs, TabsList, TabsTrigger, TabsContent
 } from "./ui/tabs"
-import { Card, CardHeader, CardTitle, CardContent } from "./ui/card"
+import { Card, CardContent } from "./ui/card"
 import { Button } from "./ui/Button"
 import { Label } from "./ui/label"
 import { Input } from "./ui/input"
+import PhoneInput from "react-phone-input-2"
+import "react-phone-input-2/lib/style.css"
+
 
 export default function SignInDialog() {
   const [open, setOpen] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
+  const [showRegPassword, setShowRegPassword] = useState(false)
+
   const [username, setName] = useState("")
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
@@ -29,6 +34,11 @@ export default function SignInDialog() {
   const auth = useSelector(selectAuth)
   const [loginErrors, setLoginErrors] = useState<{ email?: string; password?: string }>({})
   const [registerErrors, setRegisterErrors] = useState<{ username?: string; email?: string; password?: string }>({})
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -67,27 +77,39 @@ export default function SignInDialog() {
     }
   }
   const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     try {
-      await dispatch(forgotPasswordAction({ email: forgotEmail })).unwrap()
-      alert("Password reset email sent. Check your inbox.")
-      setForgotPasswordOpen(false)
-      setResetPasswordOpen(true) // open reset dialog after sending email
+      await dispatch(forgotPasswordAction({ phone })).unwrap();
+      alert("OTP sent to your phone. Enter OTP to continue.");
+      setOtpSent(true);
     } catch (err: any) {
-      alert(err || "Failed to send reset email")
+      alert(err || "Failed to send OTP");
     }
+  };
+
+const handleVerifyOtp = async (): Promise<boolean> => {
+  try {
+    await dispatch(verifyOtpAction({ phone, otp })).unwrap()
+    alert("OTP verified successfully. You can now reset your password.")
+    return true
+  } catch (err: any) {
+    alert(err || "Invalid OTP. Please try again.")
+    return false
   }
+}
+
+
   const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const token = window.location.search.split("token=")[1] || "" // or from API if you store it
+    e.preventDefault();
     try {
-      await dispatch(resetPasswordAction({ token, newPassword })).unwrap()
-      alert("Password reset successful. Please log in.")
-      setResetPasswordOpen(false)
+      await dispatch(resetPasswordAction({ phone, newPassword })).unwrap();
+      alert("Password reset successful. Please log in.");
+      setOtpSent(false);
+      setOtpVerified(false);
     } catch (err: any) {
-      alert(err || "Failed to reset password")
+      alert(err || "Failed to reset password");
     }
-  }
+  };
   return (
     <div>
       <Dialog open={open} onOpenChange={setOpen}>
@@ -122,7 +144,8 @@ export default function SignInDialog() {
                       <div className="space-y-2">
                         <Label>Password</Label>
                         <div className="relative w-full">
-                          <Input type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} required />
+                          <Input type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} required className={`w-full border rounded px-3 py-2 pr-10 ${loginErrors.password ? "border-red-500" : ""
+                            }`} />
                           <button
                             type="button"
                             className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500"
@@ -174,7 +197,16 @@ export default function SignInDialog() {
                       </div>
                       <div className="space-y-2">
                         <Label>Password</Label>
-                        <Input value={password} onChange={e => setPassword(e.target.value)} type="password" required />
+                        <div className="relative w-full">
+                          <Input value={password} onChange={e => setPassword(e.target.value)} type={showRegPassword ? "text" : "password"} required className={`w-full border rounded px-3 py-2 pr-10 ${registerErrors.password ? "border-red-500" : ""
+                            }`} />  <button
+                              type="button"
+                              className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500"
+                              onClick={() => setShowRegPassword(!showRegPassword)}
+                            >
+                            {showRegPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                          </button>
+                        </div>
                         {registerErrors.password && <p className="text-red-500 text-sm mt-1">{registerErrors.password}</p>}
                       </div>
                       <Button type="submit" className="w-full">Register</Button>
@@ -197,26 +229,68 @@ export default function SignInDialog() {
           <DialogHeader>
             <DialogTitle>Reset Your Password</DialogTitle>
             <DialogDescription>
-              Enter your email to receive a password reset link.
+              {otpSent && !otpVerified
+                ? "Enter the OTP sent to your phone."
+                : "Enter your phone number to receive an OTP."}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleForgotPassword} className="space-y-4 bg-background">
-            <div className="space-y-2">
-              <Label htmlFor="forgot-email">Email</Label>
-              <Input
-                id="forgot-email"
-                type="email"
-                value={forgotEmail}
-                onChange={(e) => setForgotEmail(e.target.value)}
-                required
-              />
-            </div>
-            <DialogFooter>
-              <Button type="submit" className="w-full">
-                Send Reset Link
-              </Button>
-            </DialogFooter>
-          </form>
+
+          {/* Step 1: Enter Phone */}
+          {!otpSent && (
+            <form onSubmit={handleForgotPassword} className="space-y-4 bg-background">
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone</Label>
+                <PhoneInput
+                  country={"in"}
+                  value={phone}
+                  onChange={(value) => setPhone(value)}
+                  inputProps={{
+                    name: "phone",
+                    required: true,
+                    autoFocus: true,
+                  }}
+                  inputClass="w-full !py-2 !px-3 !text-base !rounded-md border"
+                />
+              </div>
+              <DialogFooter>
+                <Button type="submit" className="w-full">
+                  Send OTP
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+
+          {/* Step 2: Verify OTP */}
+          {otpSent && !otpVerified && (
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault()
+                const success = await handleVerifyOtp() // ✅ call your verify function
+                if (success) {
+                  setOtpVerified(true)
+                  setForgotPasswordOpen(false) // close current
+                  setResetPasswordOpen(true)   // open reset password dialog
+                }
+              }}
+              className="space-y-4 bg-background"
+            >
+              <div className="space-y-2">
+                <Label htmlFor="otp">Enter OTP</Label>
+                <Input
+                  id="otp"
+                  type="text"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  required
+                />
+              </div>
+              <DialogFooter>
+                <Button type="submit" className="w-full">
+                  Verify OTP
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -248,6 +322,8 @@ export default function SignInDialog() {
           </form>
         </DialogContent>
       </Dialog>
+
+
     </div>
   )
 }

@@ -13,19 +13,21 @@ export default function PaymentSuccess() {
   const status = useSelector(selectOrdersStatus);
   const [orderId, setOrderId] = useState<string | null>(null);
 
-   useEffect(() => {
-    const sessionId = searchParams.get("session_id");
-    setOrderId(sessionId);
+useEffect(() => {
+  const sessionId = searchParams.get("session_id");
 
-    // 1️⃣ clear cart
-    dispatch(clearCart());
+  if (!sessionId) {
+    navigate("/");
+    return;
+  }
+  setOrderId(sessionId);
+  dispatch(clearCart());
+  const token = window.localStorage.getItem("token");
+  if (token) {
+    dispatch(fetchMyOrders(token));
+  }
+}, [dispatch, searchParams, navigate]);
 
-    // 2️⃣ fetch orders
-    const token = window.localStorage.getItem("token");
-    if (token) {
-      dispatch(fetchMyOrders(token));
-    }
-  }, [dispatch, searchParams]);
 
   if (status === "loading") {
     return (
@@ -35,11 +37,12 @@ export default function PaymentSuccess() {
     );
   }
 
-  // find order linked to session_id
   const currentOrder = orders.find(
     (o: any) => o.payment?.orderId === orderId
   );
-
+console.log("session_id:", orderId);
+console.log("orders:", orders);
+console.log("matched order:", currentOrder);
   if (!currentOrder) {
     return (
       <div className="flex flex-col items-center justify-center h-[80vh]">

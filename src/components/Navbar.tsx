@@ -6,6 +6,7 @@ import { selectAuth } from "../features/auth/authSlice";
 import { Button } from "./ui/Button";
 import SignInDialog from "./SignInDialog";
 import { ProfileDropdown } from "./ProfileDropdown";
+import NotificationPopover from "./NotificationPopover";
 
 export default function Navbar() {
   const items = useSelector(selectCart);
@@ -40,6 +41,7 @@ const navigate = useNavigate();
           >
             Checkout
           </NavLink>
+          <NotificationPopover />
         </nav>
 
         <div className="ml-auto sm:ml-4 flex items-center gap-2">

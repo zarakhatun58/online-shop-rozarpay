@@ -47,15 +47,17 @@ export async function getProfile(token: string) {
   return data
 }
 
-export async function forgotPassword(payload: { email: string }) {
+export async function forgotPassword(payload: { phone: string }) {
   const { data } = await axios.post(`${API_URL}/api/auth/forgot-password`, payload)
   return data
 }
 
-export async function resetPassword(payload: {
-  token: string
-  newPassword: string
-}) {
+export async function verifyOtp(payload: { phone: string; otp: string }) {
+  const { data } = await axios.post(`${API_URL}/api/auth/verify-otp`, payload)
+  return data
+}
+
+export async function resetPassword(payload: { phone: string; newPassword: string }) {
   const { data } = await axios.post(`${API_URL}/api/auth/reset-password`, payload)
   return data
 }
@@ -110,3 +112,29 @@ export async function getOrders(token: string) {
   });
   return data;
 }
+
+// --- Notification ---
+export const fetchNotifications = async (userId: string, token: string) => {
+  const res = await axios.get(`${API_URL}/api/notification/${userId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data;
+};
+
+export const markNotificationAsRead = async (id: string, token: string) => {
+  const res = await axios.put(
+    `${API_URL}/api/notification/read/${id}`,
+    {},
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  return res.data;
+};
+
+export const markAllNotificationsAsRead = async (userId: string, token: string) => {
+  const res = await axios.put(
+    `${API_URL}/api/notification/read-all/${userId}`,
+    {},
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  return res.data;
+};
