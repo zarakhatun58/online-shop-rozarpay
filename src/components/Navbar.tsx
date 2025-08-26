@@ -41,10 +41,10 @@ const navigate = useNavigate();
           >
             Checkout
           </NavLink>
-          <NotificationPopover />
         </nav>
 
         <div className="ml-auto sm:ml-4 flex items-center gap-2">
+           {auth.user && <NotificationPopover />}
           <Button
             variant="ghost"
             aria-label="Open cart"

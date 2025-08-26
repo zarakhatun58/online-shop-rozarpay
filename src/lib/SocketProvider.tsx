@@ -23,22 +23,19 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     setSocket(newSocket);
 
-    // ✅ Register userId when logged in
     const userId = localStorage.getItem("userId");
     if (userId) {
       newSocket.emit("register", userId);
     }
-
-    // ✅ Listen for notifications
     newSocket.on("notification", (data) => {
       dispatch(
          addNotification({
-      id: uuid(), // unique id for client-side notifications
-      title: data.title || "Notification", // default title if not provided
+      id: uuid(),
+      title: data.title || "Notification",
       message: data.message,
       type: data.type || "info",
-      read: false, // new notifications are unread
-      createdAt: new Date().toISOString(), // timestamp
+      read: false,
+      createdAt: new Date().toISOString(), 
     })
       );
     });

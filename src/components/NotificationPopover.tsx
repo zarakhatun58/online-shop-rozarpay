@@ -1,37 +1,40 @@
-import { useState, useEffect, useRef, useContext } from 'react';
-import { formatDistanceToNow } from 'date-fns';
-import { Bell } from 'lucide-react';
+import React, { useEffect, useRef } from "react";
+import { formatDistanceToNow } from "date-fns";
+import { Bell } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import axios from 'axios';
-import { getNotifications, readAllNotifications, readNotification } from '@/features/notification/notificationSlice';
-import { Button } from './ui/Button';
-import { AppDispatch } from '@/store';
-import { useDispatch } from 'react-redux';
+import { Button } from "./ui/Button";
+
+import {
+  getNotifications,
+  readAllNotifications,
+  readNotification,
+} from "@/features/notification/notificationSlice";
+import { AppDispatch, RootState } from "@/store";
+import { useDispatch, useSelector } from "react-redux";
 
 interface Notification {
-  id: number;
+  id: string;
   title: string;
   message: string;
-  context?: string;
-  created_at: string;
-  read_status: number;
-  type: string;
+  type: "info" | "success" | "error" | "payment" | "reminder" | "login";
+  read: boolean;
+  createdAt: string;
 }
 
-const NotificationPopover = () => {
+const NotificationPopover: React.FC = () => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const previousUnreadCount = useRef(0);
- const dispatch = useDispatch<AppDispatch>();
-  const { notifications, loading } = useAppSelector((state) => state.notifications);
+const dispatch = useDispatch<AppDispatch>()
+const { notifications } = useSelector((state: RootState) => state.notifications);
+
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const userId = user?.id || user?._id;
   const token = localStorage.getItem("token");
 
   const unreadCount = notifications.filter((n:any) => !n.read).length;
-
 
   // 🔊 Play notification sound
   useEffect(() => {
@@ -50,6 +53,7 @@ const NotificationPopover = () => {
     previousUnreadCount.current = unreadCount;
   }, [unreadCount]);
 
+  // 🗂 Fetch notifications on mount
   useEffect(() => {
     if (userId && token) {
       dispatch(getNotifications({ userId, token }));
@@ -66,10 +70,14 @@ const NotificationPopover = () => {
 
   const getIcon = (type: string) => {
     switch (type) {
-      case "payment": return "💳";
-      case "reminder": return "⏰";
-      case "login": return "🔑";
-      default: return "📢";
+      case "payment":
+        return "💳";
+      case "reminder":
+        return "⏰";
+      case "login":
+        return "🔑";
+      default:
+        return "📢";
     }
   };
 
@@ -105,14 +113,6 @@ const NotificationPopover = () => {
                     Mark all read
                   </Button>
                 )}
-                 {/* <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={addTestNotification}
-                    className="text-xs h-7"
-                  >
-                    Test 🔊
-                  </Button> */}
               </div>
             </CardHeader>
 
@@ -123,40 +123,34 @@ const NotificationPopover = () => {
                     No notifications yet
                   </div>
                 ) : (
-                  notifications.map((notifi:any) => (
+                  notifications.map((notifi: Notification) => (
                     <div
                       key={notifi.id}
                       className={`p-4 border-b hover:bg-gray-50 cursor-pointer transition-colors ${
-                        !notifi.read_status
+                        !notifi.read
                           ? "bg-blue-50 border-l-4 border-l-blue-500"
                           : ""
                       }`}
                       onClick={() => handleMarkAsRead(notifi.id)}
                     >
                       <div className="flex items-start space-x-3">
-                        <span className="text-lg mt-1">
-                          {getIcon(notifi.type)}
-                        </span>
+                        <span className="text-lg mt-1">{getIcon(notifi.type)}</span>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
                             <h4
                               className={`text-sm font-medium ${
-                                !notifi.read_status
-                                  ? "text-blue-900"
-                                  : "text-gray-900"
+                                !notifi.read ? "text-blue-900" : "text-gray-900"
                               }`}
                             >
                               {notifi.title}
                             </h4>
-                            {!notifi.read_status && (
+                            {!notifi.read && (
                               <div className="w-2 h-2 bg-blue-500 rounded-full ml-2"></div>
                             )}
                           </div>
-                          <p className="text-sm text-gray-600 mt-1">
-                            {notifi.message}
-                          </p>
+                          <p className="text-sm text-gray-600 mt-1">{notifi.message}</p>
                           <p className="text-xs text-gray-400 mt-2">
-                            {formatDistanceToNow(new Date(notifi.created_at), {
+                            {formatDistanceToNow(new Date(notifi.createdAt), {
                               addSuffix: true,
                             })}
                           </p>
@@ -173,12 +167,5 @@ const NotificationPopover = () => {
     </div>
   );
 };
+
 export default NotificationPopover;
-
-function useAppDispatch() {
-    throw new Error('Function not implemented.');
-}
-function useAppSelector(arg0: (state: any) => any): { notifications: any; loading: any; } {
-    throw new Error('Function not implemented.');
-}
-
