@@ -40,7 +40,7 @@ export default function SignInDialog() {
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
-
+  const { connectSocket } = useSocket();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -54,7 +54,9 @@ export default function SignInDialog() {
     try {
       await dispatch(login({ email, password }))
       toast("✅ Login successful! 🎉");
-      
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const userId = user?.id || user?._id;
+    if (userId) connectSocket(userId);
       setOpen(false)
     } catch {
       setLoginErrors({ password: "Invalid credentials" })
@@ -74,6 +76,9 @@ export default function SignInDialog() {
     try {
       await dispatch(register({ username, email, password }))
       toast("Signup successful! 🎉");
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const userId = user?.id || user?._id;
+    if (userId) connectSocket(userId);
       setOpen(false)
     } catch {
       setRegisterErrors({ email: "Signup failed, try another email" })
