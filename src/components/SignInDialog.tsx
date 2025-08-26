@@ -16,6 +16,8 @@ import { Label } from "./ui/label"
 import { Input } from "./ui/input"
 import PhoneInput from "react-phone-input-2"
 import "react-phone-input-2/lib/style.css"
+import { toast } from 'sonner';
+import { useSocket } from "@/lib/SocketProvider"
 
 
 export default function SignInDialog() {
@@ -39,6 +41,7 @@ export default function SignInDialog() {
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
 
+  const { sendNotification } = useSocket();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -51,7 +54,12 @@ export default function SignInDialog() {
     if (Object.keys(errors).length > 0) return
     try {
       await dispatch(login({ email, password }))
-      alert("Login successful! 🎉");
+      toast("✅ Login successful! 🎉");
+      sendNotification?.({
+        title: "Login Successful",
+        message: `User ${email} logged in.`,
+        type: "login",
+      });
       setOpen(false)
     } catch {
       setLoginErrors({ password: "Invalid credentials" })
@@ -70,7 +78,12 @@ export default function SignInDialog() {
     if (Object.keys(errors).length > 0) return
     try {
       await dispatch(register({ username, email, password }))
-      alert("Signup successful! 🎉");
+      toast("Signup successful! 🎉");
+      sendNotification?.({
+        title: "Signup successful! 🎉",
+         message: `User ${email} create account.`,
+        type: "Signup",
+      });
       setOpen(false)
     } catch {
       setRegisterErrors({ email: "Signup failed, try another email" })
@@ -80,34 +93,34 @@ export default function SignInDialog() {
     e.preventDefault();
     try {
       await dispatch(forgotPasswordAction({ phone })).unwrap();
-      alert("OTP sent to your phone. Enter OTP to continue.");
+      toast("OTP sent to your phone. Enter OTP to continue.");
       setOtpSent(true);
     } catch (err: any) {
-      alert(err || "Failed to send OTP");
+      toast(err || "Failed to send OTP");
     }
   };
 
-const handleVerifyOtp = async (): Promise<boolean> => {
-  try {
-    await dispatch(verifyOtpAction({ phone, otp })).unwrap()
-    alert("OTP verified successfully. You can now reset your password.")
-    return true
-  } catch (err: any) {
-    alert(err || "Invalid OTP. Please try again.")
-    return false
+  const handleVerifyOtp = async (): Promise<boolean> => {
+    try {
+      await dispatch(verifyOtpAction({ phone, otp })).unwrap()
+      toast("OTP verified successfully. You can now reset your password.")
+      return true
+    } catch (err: any) {
+      toast(err || "Invalid OTP. Please try again.")
+      return false
+    }
   }
-}
 
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await dispatch(resetPasswordAction({ phone, newPassword })).unwrap();
-      alert("Password reset successful. Please log in.");
+      toast("Password reset successful. Please log in.");
       setOtpSent(false);
       setOtpVerified(false);
     } catch (err: any) {
-      alert(err || "Failed to reset password");
+      toast(err || "Failed to reset password");
     }
   };
   return (

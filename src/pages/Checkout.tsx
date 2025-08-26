@@ -1,29 +1,26 @@
-import { useDispatch, useSelector } from 'react-redux'
-import { clearCart, selectCart, selectCartTotal } from '../features/cart/cartSlice'
+import {  useSelector } from 'react-redux'
+import {  selectCart, selectCartTotal } from '../features/cart/cartSlice'
 import { Button } from '../components/ui/Button';
 import { selectAuth } from '@/features/auth/authSlice';
-import {  CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { useState } from 'react';
-import { createStripeCheckoutSession, createStripeOrder, updateOrderPaymentStatus } from '@/lib/api';
+import { createStripeCheckoutSession } from '@/lib/api';
 import { stripePromise } from '@/App';
+import { toast } from 'sonner';
 
 export default function CheckoutPage() {
  const items = useSelector(selectCart);
   const total = useSelector(selectCartTotal);
   const { token, user } = useSelector(selectAuth);
-  const dispatch = useDispatch();
-  const stripe = useStripe();
-  const elements = useElements();
   const [loading, setLoading] = useState(false);
 
 const handleCheckout = async () => {
     if (!token) {
-      alert("Please login to checkout");
+      toast("Please login to checkout");
       return;
     }
 
     if (!items.length) {
-      alert("Your cart is empty!");
+      toast("Your cart is empty!");
       return;
     }
 
@@ -41,17 +38,17 @@ const handleCheckout = async () => {
       // 2️⃣ Redirect to Stripe Checkout
       const stripe = await stripePromise;
       if (!stripe) {
-        alert("Stripe failed to load");
+        toast("Stripe failed to load");
         setLoading(false);
         return;
       }
 
       const { error } = await stripe.redirectToCheckout({ sessionId });
       if (error) {
-        alert(error.message);
+        toast(error.message);
       }
     } catch (err: any) {
-      alert(err.response?.data?.error || err.message || "Checkout failed");
+      toast(err.response?.data?.error || err.message || "Checkout failed");
     }
 
     setLoading(false);

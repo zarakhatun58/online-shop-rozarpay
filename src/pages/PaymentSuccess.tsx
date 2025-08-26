@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { clearCart } from "@/features/cart/cartSlice";
 import { fetchMyOrders, selectOrders, selectOrdersStatus } from "@/features/orders/orderSlice";
 import { RootState, AppDispatch } from "@/store";
+import { useSocket } from "@/lib/SocketProvider";
 
 export default function PaymentSuccess() {
   const dispatch = useDispatch<AppDispatch>();
@@ -12,6 +13,7 @@ export default function PaymentSuccess() {
   const orders = useSelector(selectOrders);       // ✅ orders list
   const status = useSelector(selectOrdersStatus);
   const [orderId, setOrderId] = useState<string | null>(null);
+ const { sendNotification } = useSocket();
 
 useEffect(() => {
   const sessionId = searchParams.get("session_id");
@@ -27,7 +29,15 @@ useEffect(() => {
     dispatch(fetchMyOrders(token));
   }
 }, [dispatch, searchParams, navigate]);
-
+useEffect(() => {
+  if (sendNotification && orderId) {
+    sendNotification({
+      title: "Payment Successful",
+      message: `Order ${orderId} has been placed successfully.`,
+      type: "payment",
+    });
+  }
+}, [sendNotification, orderId]);
 
   if (status === "loading") {
     return (

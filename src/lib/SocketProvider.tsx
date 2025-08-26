@@ -6,6 +6,7 @@ import { addNotification } from "@/features/notification/notificationSlice";
 
 interface SocketContextType {
   socket: Socket | null;
+  sendNotification?: (data: { title: string; message: string; type?: string }) => void;
 }
 
 const SocketContext = createContext<SocketContextType>({ socket: null });
@@ -44,9 +45,14 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       newSocket.disconnect();
     };
   }, [dispatch]);
-
+  
+ const sendNotification = (data: { title: string; message: string; type?: string }) => {
+    if (socket) {
+      socket.emit("notification", data);
+    }
+  };
   return (
-    <SocketContext.Provider value={{ socket }}>
+    <SocketContext.Provider value={{ socket , sendNotification}}>
       {children}
     </SocketContext.Provider>
   );

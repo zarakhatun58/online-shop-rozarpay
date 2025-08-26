@@ -13,6 +13,7 @@ import {
 } from "@/features/notification/notificationSlice";
 import { AppDispatch, RootState } from "@/store";
 import { useDispatch, useSelector } from "react-redux";
+import { toast } from "sonner";
 
 interface Notification {
   id: string;
@@ -52,7 +53,20 @@ const { notifications } = useSelector((state: RootState) => state.notifications)
 
     previousUnreadCount.current = unreadCount;
   }, [unreadCount]);
+ const handleNotification = (notification: Notification) => {
+    console.log("🔔 Received notification:", notification);
 
+    // Show toast
+    toast(notification.title);
+
+    // Browser Notification API
+    if (Notification.permission === "granted") {
+      new Notification(notification.title, {
+        body: notification.message,
+        icon: "/favicon.ico",
+      });
+    }
+  };
   // 🗂 Fetch notifications on mount
   useEffect(() => {
     if (userId && token) {
