@@ -7,28 +7,43 @@ import { RootState, AppDispatch } from "@/store";
 import { useSocket } from "@/lib/SocketProvider";
 
 export default function PaymentSuccess() {
-  const dispatch = useDispatch<AppDispatch>();
+const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const orders = useSelector(selectOrders);       // ✅ orders list
+  const orders = useSelector(selectOrders);
   const status = useSelector(selectOrdersStatus);
-  const [orderId, setOrderId] = useState<string | null>(null);
+  const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
 
-useEffect(() => {
-  const sessionId = searchParams.get("session_id");
+  const { socket } = useSocket();
 
-  if (!sessionId) {
-    navigate("/");
-    return;
-  }
-  setOrderId(sessionId);
-  dispatch(clearCart());
-  const token = window.localStorage.getItem("token");
-  if (token) {
-    dispatch(fetchMyOrders(token));
-  }
-}, [dispatch, searchParams, navigate]);
+  useEffect(() => {
+    const orderId = searchParams.get("order_id"); // Use order_id instead of session_id
+    const sessionId = searchParams.get("session_id");
 
+    if (!orderId || !sessionId) {
+      navigate("/");
+      return;
+    }
+
+    setCurrentOrderId(orderId);
+
+    // Clear cart after successful payment
+    dispatch(clearCart());
+
+    const token = localStorage.getItem("token");
+    if (token) {
+      dispatch(fetchMyOrders(token));
+    }
+
+    // Emit notification via socket
+    socket?.emit("notification", {
+      title: "Payment Successful 💳",
+      message: `Your payment for order ${orderId} has been completed!`,
+      type: "success",
+    });
+
+   alert("✅ Payment successful!");
+  }, [dispatch, navigate, searchParams, socket]);
 
   if (status === "loading") {
     return (
@@ -38,20 +53,14 @@ useEffect(() => {
     );
   }
 
-  const currentOrder = orders.find(
-    (o: any) => o.payment?.orderId === orderId
-  );
-console.log("session_id:", orderId);
-console.log("orders:", orders);
-console.log("matched order:", currentOrder);
+  const currentOrder = orders.find((o) => o._id === currentOrderId);
+
   if (!currentOrder) {
     return (
       <div className="flex flex-col items-center justify-center h-[80vh]">
-        <h1 className="text-2xl font-bold text-green-600">
-          ✅ Payment Successful!
-        </h1>
+        <h1 className="text-2xl font-bold text-green-600">✅ Payment Successful!</h1>
         <p className="text-gray-600 mt-2">
-          We could not match your order automatically.  
+          We could not match your order automatically.
           <button
             onClick={() => navigate("/orders")}
             className="ml-2 underline text-blue-600"
@@ -72,11 +81,8 @@ console.log("matched order:", currentOrder);
         Thank you for your order. Here’s the status of your purchase:
       </p>
 
-      {/* Tracking UI */}
       <div className="bg-white rounded-2xl shadow p-6">
-        <h2 className="text-lg font-semibold mb-4">
-          Order #{currentOrder._id}
-        </h2>
+        <h2 className="text-lg font-semibold mb-4">Order #{currentOrder._id}</h2>
 
         <div className="flex items-center justify-between">
           {["Pending", "Paid", "Shipped", "Delivered"].map((step, idx) => {
@@ -89,9 +95,7 @@ console.log("matched order:", currentOrder);
               <div key={step} className="flex-1 flex flex-col items-center">
                 <div
                   className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    isCompleted
-                      ? "bg-green-500 text-white"
-                      : "bg-gray-300 text-gray-600"
+                    isCompleted ? "bg-green-500 text-white" : "bg-gray-300 text-gray-600"
                   }`}
                 >
                   {idx + 1}
@@ -99,9 +103,7 @@ console.log("matched order:", currentOrder);
                 <span className="mt-2 text-sm">{step}</span>
                 {idx < 3 && (
                   <div
-                    className={`h-1 w-full ${
-                      isCompleted ? "bg-green-500" : "bg-gray-300"
-                    }`}
+                    className={`h-1 w-full ${isCompleted ? "bg-green-500" : "bg-gray-300"}`}
                   />
                 )}
               </div>
