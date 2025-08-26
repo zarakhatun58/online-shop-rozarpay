@@ -41,7 +41,6 @@ export default function SignInDialog() {
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
 
-  const { sendNotification } = useSocket();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -55,11 +54,7 @@ export default function SignInDialog() {
     try {
       await dispatch(login({ email, password }))
       toast("✅ Login successful! 🎉");
-      sendNotification?.({
-        title: "Login Successful",
-        message: `User ${email} logged in.`,
-        type: "login",
-      });
+      
       setOpen(false)
     } catch {
       setLoginErrors({ password: "Invalid credentials" })
@@ -79,11 +74,6 @@ export default function SignInDialog() {
     try {
       await dispatch(register({ username, email, password }))
       toast("Signup successful! 🎉");
-      sendNotification?.({
-        title: "Signup successful! 🎉",
-         message: `User ${email} create account.`,
-        type: "Signup",
-      });
       setOpen(false)
     } catch {
       setRegisterErrors({ email: "Signup failed, try another email" })

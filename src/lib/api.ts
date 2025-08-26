@@ -1,7 +1,7 @@
 import axios from "axios"
 import type { Product } from "./types"
 
-const API_URL ="https://online-shop-server-hy92.onrender.com"
+export const API_URL ="https://online-shop-server-hy92.onrender.com"
 
 // ---------- PRODUCTS ----------
 
