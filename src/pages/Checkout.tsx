@@ -65,7 +65,7 @@ const handleCheckout = async () => {
         <h2 className="font-semibold mb-3">Order Summary</h2>
         {items.length === 0 ? <p className="text-gray-600">No items in cart.</p> : (
           <ul className="space-y-2">
-            {items.map(it => (
+            {items.map((it:any) => (
               <li key={it._id} className="flex justify-between text-sm">
                 <span>{it.name} × {it.qty}</span>
                 <span>₹{it.price * it.qty}</span>

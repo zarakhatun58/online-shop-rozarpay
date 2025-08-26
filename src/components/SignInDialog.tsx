@@ -2,6 +2,7 @@
 import { useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { AppDispatch, RootState } from "@/store"
+import { Eye, EyeOff } from "lucide-react"
 import { selectAuth, logout, login, register, forgotPasswordAction, resetPasswordAction } from "@/features/auth/authSlice"
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger
@@ -18,6 +19,7 @@ export default function SignInDialog() {
   const [open, setOpen] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [username, setName] = useState("")
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
@@ -25,28 +27,43 @@ export default function SignInDialog() {
   const [newPassword, setNewPassword] = useState("");
   const dispatch = useDispatch<AppDispatch>()
   const auth = useSelector(selectAuth)
+  const [loginErrors, setLoginErrors] = useState<{ email?: string; password?: string }>({})
+  const [registerErrors, setRegisterErrors] = useState<{ username?: string; email?: string; password?: string }>({})
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    const errors: typeof loginErrors = {}
+
+    if (!email) errors.email = "Email is required"
+    if (!password) errors.password = "Password is required"
+
+    setLoginErrors(errors)
+    if (Object.keys(errors).length > 0) return
     try {
       await dispatch(login({ email, password }))
       alert("Login successful! 🎉");
       setOpen(false)
-    } catch (err) {
-      console.error(err)
-      alert("Login failed")
+    } catch {
+      setLoginErrors({ password: "Invalid credentials" })
     }
   }
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
+    const errors: typeof registerErrors = {}
+
+    if (!username) errors.username = "Username is required"
+    if (!email) errors.email = "Email is required"
+    if (!password) errors.password = "Password is required"
+
+    setRegisterErrors(errors)
+    if (Object.keys(errors).length > 0) return
     try {
       await dispatch(register({ username, email, password }))
-       alert("Signup successful! 🎉");
+      alert("Signup successful! 🎉");
       setOpen(false)
-    } catch (err) {
-      console.error(err)
-      alert("Signup failed")
+    } catch {
+      setRegisterErrors({ email: "Signup failed, try another email" })
     }
   }
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -100,11 +117,23 @@ export default function SignInDialog() {
                       <div className="space-y-2">
                         <Label>Email</Label>
                         <Input value={email} onChange={e => setEmail(e.target.value)} type="email" required />
+                        {loginErrors.email && <p className="text-red-500 text-sm mt-1">{loginErrors.email}</p>}
                       </div>
                       <div className="space-y-2">
                         <Label>Password</Label>
-                        <Input value={password} onChange={e => setPassword(e.target.value)} type="password" required />
+                        <div className="relative w-full">
+                          <Input type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} required />
+                          <button
+                            type="button"
+                            className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                          </button>
+                        </div>
+                        {loginErrors.password && <p className="text-red-500 text-sm mt-1">{loginErrors.password}</p>}
                       </div>
+
                       <div className="flex items-center justify-between">
                         <button
                           type="button"
@@ -116,7 +145,8 @@ export default function SignInDialog() {
                         <button
                           type="button"
                           className="text-sm text-gray-500 hover:underline"
-                          onClick={() => {setResetPasswordOpen(true)
+                          onClick={() => {
+                            setResetPasswordOpen(true)
                           }}
                         >
                           Reset
@@ -135,14 +165,17 @@ export default function SignInDialog() {
                       <div className="space-y-2">
                         <Label>Full Name</Label>
                         <Input value={username} onChange={e => setName(e.target.value)} required />
+                        {registerErrors.username && <p className="text-red-500 text-sm mt-1">{registerErrors.username}</p>}
                       </div>
                       <div className="space-y-2">
                         <Label>Email</Label>
                         <Input value={email} onChange={e => setEmail(e.target.value)} type="email" required />
+                        {registerErrors.email && <p className="text-red-500 text-sm mt-1">{registerErrors.email}</p>}
                       </div>
                       <div className="space-y-2">
                         <Label>Password</Label>
                         <Input value={password} onChange={e => setPassword(e.target.value)} type="password" required />
+                        {registerErrors.password && <p className="text-red-500 text-sm mt-1">{registerErrors.password}</p>}
                       </div>
                       <Button type="submit" className="w-full">Register</Button>
                     </form>

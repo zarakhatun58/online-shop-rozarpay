@@ -15,7 +15,7 @@ type User = {
   username: string
   email: string
   profilePic?: string | null
-   address?: string
+  address?: string
 }
 
 type AuthState = {
@@ -24,10 +24,12 @@ type AuthState = {
   status: "idle" | "loading" | "succeeded" | "failed"
   error: string | null
 }
+const savedToken = localStorage.getItem("authToken")
+const savedUser = localStorage.getItem("authUser")
 
 const initial: AuthState = {
-  token: null,
-  user: null,
+  token: savedToken ? JSON.parse(savedToken) : null,
+  user: savedUser ? JSON.parse(savedUser) : null,
   status: "idle",
   error: null,
 }
@@ -123,6 +125,8 @@ const authSlice = createSlice({
         state.status = "succeeded"
         state.token = action.payload.token
         state.user = action.payload.user
+        localStorage.setItem("authToken", JSON.stringify(action.payload.token))
+        localStorage.setItem("authUser", JSON.stringify(action.payload.user))
       })
       .addCase(register.rejected, (state, action) => {
         state.status = "failed"
@@ -138,6 +142,8 @@ const authSlice = createSlice({
         state.status = "succeeded"
         state.token = action.payload.token
         state.user = action.payload.user
+        localStorage.setItem("authToken", JSON.stringify(action.payload.token))
+        localStorage.setItem("authUser", JSON.stringify(action.payload.user))
       })
       .addCase(login.rejected, (state, action) => {
         state.status = "failed"
@@ -149,6 +155,8 @@ const authSlice = createSlice({
         state.token = null
         state.user = null
         state.status = "idle"
+        localStorage.removeItem("authToken")
+        localStorage.removeItem("authUser")
       })
 
       // PROFILE
