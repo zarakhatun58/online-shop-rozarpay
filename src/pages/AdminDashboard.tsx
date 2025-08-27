@@ -34,19 +34,26 @@ const handleDelete = async (id: string) => {
   if (!confirm("Are you sure you want to delete this product?")) return;
 
   try {
-    const token = JSON.parse(localStorage.getItem("authToken") || '""');
+    const token = localStorage.getItem("authToken") || ""; // get token as string
+
+    if (!token) {
+      alert("You must be logged in as admin to delete a product");
+      return;
+    }
 
     await axios.delete(`${API_URL}/api/products/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
-    dispatch(fetchProducts());
+    dispatch(fetchProducts()); // refresh products
     alert("Product deleted successfully!");
-  } catch (err) {
-    console.error(err);
-    alert("Failed to delete product");
+  } catch (err: any) {
+    console.error("Delete product error:", err.response?.data || err.message);
+    alert(err.response?.data?.message || "Failed to delete product");
   }
 };
+
+
 
 
   if (status === "loading") return <p>Loading products...</p>;
