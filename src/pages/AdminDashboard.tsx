@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react"; 
 import { useDispatch, useSelector } from "react-redux";
 import { fetchProducts, selectProducts, selectProductsStatus } from "@/features/products/productSlice";
 import { AppDispatch } from "@/store";
@@ -6,8 +6,6 @@ import { Product } from "@/lib/types";
 import { API_URL } from "@/lib/api";
 import axios from "axios";
 import ProductModal from "./ProductModal";
-
-
 
 export default function AdminDashboard() {
   const dispatch = useDispatch<AppDispatch>();
@@ -17,8 +15,16 @@ export default function AdminDashboard() {
   const [limit] = useState(10);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const totalPages = Math.ceil(products.length / limit);
-  const paginated = products.slice((page - 1) * limit, page * limit);
+  const [search, setSearch] = useState("");
+
+  const filteredProducts = products.filter(
+    (p) =>
+      p.name.toLowerCase().includes(search.toLowerCase()) ||
+      (p.category && p.category.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  const totalPages = Math.ceil(filteredProducts.length / limit);
+  const paginated = filteredProducts.slice((page - 1) * limit, page * limit);
 
   useEffect(() => {
     dispatch(fetchProducts());
@@ -42,19 +48,28 @@ export default function AdminDashboard() {
   if (status === "failed") return <p>Failed to load products.</p>;
 
   return (
-     <div className="p-6">
+    <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Admin Dashboard - Products</h1>
 
-      {/* Add Product Button */}
-      <button
-        className="mb-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-        onClick={() => {
-          setEditingProduct(null);
-          setIsModalOpen(true);
-        }}
-      >
-        ➕ Add Product
-      </button>
+      {/* Search & Add */}
+      <div className="flex justify-between mb-4">
+        <input
+          type="text"
+          placeholder="Search by name or category"
+          className="border rounded px-3 py-1 w-1/2"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <button
+          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+          onClick={() => {
+            setEditingProduct(null);
+            setIsModalOpen(true);
+          }}
+        >
+          ➕ Add Product
+        </button>
+      </div>
 
       {/* Table */}
       <div className="overflow-x-auto">
@@ -62,6 +77,8 @@ export default function AdminDashboard() {
           <thead className="bg-gray-100">
             <tr>
               <th className="py-2 px-4">#</th>
+              <th className="py-2 px-4">Thumbnail</th>
+              <th className="py-2 px-4">Images</th>
               <th className="py-2 px-4">Name</th>
               <th className="py-2 px-4">Category</th>
               <th className="py-2 px-4">Price</th>
@@ -72,6 +89,27 @@ export default function AdminDashboard() {
             {paginated.map((product: Product, idx) => (
               <tr key={product._id} className="border-b">
                 <td className="py-2 px-4">{(page - 1) * limit + idx + 1}</td>
+                <td className="py-2 px-4">
+                  {product.thumbnail ? (
+                    <img
+                      src={`${API_URL}${product.thumbnail}`}
+                      alt={product.name}
+                      className="w-12 h-12 object-cover rounded"
+                    />
+                  ) : (
+                    "-"
+                  )}
+                </td>
+                <td className="py-2 px-4 flex gap-1 flex-wrap">
+                  {product.images?.map((img:any, i:any) => (
+                    <img
+                      key={i}
+                      src={`${API_URL}${img}`}
+                      alt={product.name}
+                      className="w-8 h-8 object-cover rounded border"
+                    />
+                  ))}
+                </td>
                 <td className="py-2 px-4">{product.name}</td>
                 <td className="py-2 px-4">{product.category || "-"}</td>
                 <td className="py-2 px-4">${product.price}</td>
@@ -96,7 +134,7 @@ export default function AdminDashboard() {
             ))}
             {paginated.length === 0 && (
               <tr>
-                <td colSpan={5} className="text-center py-4">
+                <td colSpan={7} className="text-center py-4">
                   No products found.
                 </td>
               </tr>
@@ -120,10 +158,9 @@ export default function AdminDashboard() {
 
       {/* Product Modal */}
       <ProductModal
-        isOpen={isModalOpen}
+        open={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSuccess={() => dispatch(fetchProducts())}
-        product={editingProduct}
+        product={editingProduct || undefined}
       />
     </div>
   );

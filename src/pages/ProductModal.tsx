@@ -1,90 +1,95 @@
-import React, { useState, useEffect } from "react";
-import { API_URL } from "@/lib/api";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { API_URL } from "@/lib/api";
 import { Product } from "@/lib/types";
 
-type ProductModalProps = {
-  isOpen: boolean;
+type Props = {
+  open: boolean;
   onClose: () => void;
-  onSuccess: () => void;
-  product?: Product | null;
+  product?: Product;
 };
 
-export default function ProductModal({ isOpen, onClose, onSuccess, product }: ProductModalProps) {
-  const [form, setForm] = useState({
-    name: "",
-    category: "",
-    price: "",
-    description: "",
-  });
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+export default function ProductModal({ open, onClose, product }: Props) {
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState("");
+  const [price, setPrice] = useState<number | "">("");
+  const [description, setDescription] = useState("");
+  const [image, setImage] = useState<File | null>(null);
+  const [thumbnail, setThumbnail] = useState<File | null>(null);
+  const [images, setImages] = useState<File[]>([]);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [previewThumbnail, setPreviewThumbnail] = useState<string | null>(null);
+  const [previewImages, setPreviewImages] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Fill form if editing
   useEffect(() => {
     if (product) {
-      setForm({
-        name: product.name || "",
-        category: product.category || "",
-        price: product.price.toString(),
-        description: product.description || "",
-      });
-      setPreviewUrl(product.image || null);
+      setName(product.name || "");
+      setCategory(product.category || "");
+      setPrice(product.price || "");
+      setDescription(product.description || "");
+      setPreviewImage(product.image ? `${API_URL}${product.image}` : null);
+      setPreviewThumbnail(product.thumbnail ? `${API_URL}${product.thumbnail}` : null);
+      setPreviewImages(product.images ? product.images.map((img:any) => `${API_URL}${img}`) : []);
     } else {
-      setForm({ name: "", category: "", price: "", description: "" });
-      setImageFile(null);
-      setPreviewUrl(null);
+      setName("");
+      setCategory("");
+      setPrice("");
+      setDescription("");
+      setImage(null);
+      setThumbnail(null);
+      setImages([]);
+      setPreviewImage(null);
+      setPreviewThumbnail(null);
+      setPreviewImages([]);
     }
   }, [product]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>, type: "image" | "thumbnail" | "images") => {
+    if (!e.target.files) return;
+    if (type === "image") {
+      setImage(e.target.files[0]);
+      setPreviewImage(URL.createObjectURL(e.target.files[0]));
+    } else if (type === "thumbnail") {
+      setThumbnail(e.target.files[0]);
+      setPreviewThumbnail(URL.createObjectURL(e.target.files[0]));
+    } else if (type === "images") {
+      const files = Array.from(e.target.files);
+      setImages(files);
+      setPreviewImages(files.map((f) => URL.createObjectURL(f)));
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.price) {
+    if (!name || !price) {
       alert("Name and Price are required");
       return;
     }
-
+    setLoading(true);
     try {
-      setLoading(true);
       const formData = new FormData();
-      formData.append("name", form.name);
-      formData.append("category", form.category);
-      formData.append("price", form.price);
-      formData.append("description", form.description);
-      if (imageFile) formData.append("image", imageFile);
+      formData.append("name", name);
+      formData.append("category", category);
+      formData.append("price", price.toString());
+      formData.append("description", description);
+      if (image) formData.append("image", image);
+      if (thumbnail) formData.append("thumbnail", thumbnail);
+      images.forEach((img) => formData.append("images", img));
 
-      if (product) {
-        await axios.put(`${API_URL}/api/products/${product._id}`, formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
-        alert("Product updated successfully!");
+      const token = localStorage.getItem("token");
+      const config = {
+        headers: { "Authorization": `Bearer ${token}`, "Content-Type": "multipart/form-data" }
+      };
+
+      if (product?._id) {
+        await axios.put(`${API_URL}/api/products/${product._id}`, formData, config);
+        alert("Product updated successfully");
       } else {
-        await axios.post(`${API_URL}/api/products`, formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
-        alert("Product created successfully!");
+        await axios.post(`${API_URL}/api/products`, formData, config);
+        alert("Product created successfully");
       }
 
-      onSuccess();
       onClose();
     } catch (err) {
       console.error(err);
@@ -94,67 +99,71 @@ export default function ProductModal({ isOpen, onClose, onSuccess, product }: Pr
     }
   };
 
-  if (!isOpen) return null;
+  if (!open) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-lg">
+      <div className="bg-white rounded-lg w-full max-w-2xl p-6 relative">
+        <button className="absolute top-3 right-3 text-gray-500 hover:text-gray-700" onClick={onClose}>
+          ✖
+        </button>
         <h2 className="text-xl font-bold mb-4">{product ? "Edit Product" : "Add Product"}</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="text"
-            name="name"
             placeholder="Product Name"
-            value={form.name}
-            onChange={handleChange}
-            className="w-full border rounded px-3 py-2"
+            className="border px-3 py-2 w-full rounded"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
           />
           <input
             type="text"
-            name="category"
             placeholder="Category"
-            value={form.category}
-            onChange={handleChange}
-            className="w-full border rounded px-3 py-2"
+            className="border px-3 py-2 w-full rounded"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
           />
           <input
             type="number"
-            name="price"
             placeholder="Price"
-            value={form.price}
-            onChange={handleChange}
-            className="w-full border rounded px-3 py-2"
+            className="border px-3 py-2 w-full rounded"
+            value={price}
+            onChange={(e) => setPrice(Number(e.target.value))}
           />
           <textarea
-            name="description"
             placeholder="Description"
-            value={form.description}
-            onChange={handleChange}
-            className="w-full border rounded px-3 py-2"
+            className="border px-3 py-2 w-full rounded"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
           />
-          <div>
-            <label className="block mb-1 font-semibold">Product Image:</label>
-            <input type="file" accept="image/*" onChange={handleImageChange} />
-            {previewUrl && (
-              <img
-                src={previewUrl}
-                alt="Preview"
-                className="mt-2 h-32 object-contain border rounded"
-              />
-            )}
+          <div className="flex gap-4">
+            <div>
+              <label className="block mb-1">Main Image</label>
+              <input type="file" accept="image/*" onChange={(e) => handleImageChange(e, "image")} />
+              {previewImage && <img src={previewImage} alt="Preview" className="w-24 h-24 mt-2 object-cover rounded" />}
+            </div>
+            <div>
+              <label className="block mb-1">Thumbnail</label>
+              <input type="file" accept="image/*" onChange={(e) => handleImageChange(e, "thumbnail")} />
+              {previewThumbnail && <img src={previewThumbnail} alt="Preview" className="w-24 h-24 mt-2 object-cover rounded" />}
+            </div>
+            <div>
+              <label className="block mb-1">Other Images</label>
+              <input type="file" accept="image/*" multiple onChange={(e) => handleImageChange(e, "images")} />
+              <div className="flex flex-wrap mt-2 gap-2">
+                {previewImages.map((img, idx) => (
+                  <img key={idx} src={img} alt="Preview" className="w-16 h-16 object-cover rounded" />
+                ))}
+              </div>
+            </div>
           </div>
-          <div className="flex justify-end gap-2">
-            <button type="button" className="px-4 py-2 bg-gray-300 rounded" onClick={onClose}>
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              {loading ? "Saving..." : "Save"}
-            </button>
-          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            {loading ? "Saving..." : product ? "Update Product" : "Add Product"}
+          </button>
         </form>
       </div>
     </div>

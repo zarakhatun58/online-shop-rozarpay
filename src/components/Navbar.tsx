@@ -31,16 +31,18 @@ const navigate = useNavigate();
           >
             Home
           </NavLink>
-          <NavLink
-            to="/dashboard"
-            className={({ isActive }) =>
-              `px-2 py-1 rounded hover:bg-white/20 ${
-                isActive ? "bg-white/20" : ""
-              }`
-            }
-          >
-            Dashboard
-          </NavLink>
+          {auth.user?.role === "admin" && (
+            <NavLink
+              to="/admin/dashboard"
+              className={({ isActive }) =>
+                `px-2 py-1 rounded hover:bg-white/20 ${
+                  isActive ? "bg-white/20" : ""
+                }`
+              }
+            >
+              Admin Dashboard
+            </NavLink>
+          )}
           <NavLink
             to="/checkout"
             className={({ isActive }) =>
