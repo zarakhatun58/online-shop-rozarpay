@@ -12,7 +12,7 @@ import {
 } from "../../lib/api"
 
 type User = {
-  id: string
+  _id: string
   username: string
   email: string
   profilePic?: string | null
@@ -67,7 +67,6 @@ export const login = createAsyncThunk<
 // LOGOUT
 export const logout = createAsyncThunk("auth/logout", async () => {
   await logoutUser()
-  // removal is handled in reducer as well
   return null
 })
 

@@ -32,6 +32,16 @@ const navigate = useNavigate();
             Home
           </NavLink>
           <NavLink
+            to="/dashboard"
+            className={({ isActive }) =>
+              `px-2 py-1 rounded hover:bg-white/20 ${
+                isActive ? "bg-white/20" : ""
+              }`
+            }
+          >
+            Dashboard
+          </NavLink>
+          <NavLink
             to="/checkout"
             className={({ isActive }) =>
               `px-2 py-1 rounded hover:bg-white/20 ${
@@ -44,7 +54,7 @@ const navigate = useNavigate();
         </nav>
 
         <div className="ml-auto sm:ml-4 flex items-center gap-2">
-           {auth.user && <NotificationPopover />}
+          {auth.user && <NotificationPopover />}
           <Button
             variant="ghost"
             aria-label="Open cart"

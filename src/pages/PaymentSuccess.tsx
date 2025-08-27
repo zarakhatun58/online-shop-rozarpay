@@ -17,7 +17,6 @@ export default function PaymentSuccess() {
 const { connectSocket , socket} = useSocket();
   const [cartCleared, setCartCleared] = useState(false);
 
-
  useEffect(() => {
     const orderId = searchParams.get("order_id");
     const sessionId = searchParams.get("session_id");
@@ -32,10 +31,11 @@ const { connectSocket , socket} = useSocket();
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    // ✅ Ensure socket is connected with userId
     const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-    if (storedUser?._id || storedUser?.id) {
-      connectSocket(storedUser._id || storedUser.id);
+    const userId = storedUser?._id || storedUser?.id;
+
+    if (userId) {
+      connectSocket(userId);
     }
 
     // ✅ Update payment status in backend
@@ -49,20 +49,35 @@ const { connectSocket , socket} = useSocket();
     })
       .then((res) => res.json())
       .then(async () => {
-        // ✅ Refetch user orders
         const res: any = await dispatch(fetchMyOrders(token));
         const currentOrder = res.payload.find((o: any) => o._id === orderId);
 
-        // ✅ Clear cart only once
-        if (currentOrder?.status === "paid" && !cartCleared) {
+        // ✅ Clear cart & send notifications
+        if (currentOrder?.status === "paid" && !cartCleared && userId) {
           dispatch(clearCart());
           setCartCleared(true);
 
-          // ✅ Trigger socket notification
+          // 1. Emit real-time notification
           socket?.emit("notification", {
+            userId,
             title: "Payment Successful 💳",
             message: `Your payment for order ${orderId} has been completed!`,
             type: "success",
+          });
+
+          // 2. Persist notification in backend
+          await fetch(`${API_URL}/api/notification/notify-now`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              userId,
+              title: "Payment Successful 💳",
+              message: `Your payment for order ${orderId} has been completed!`,
+              type: "success",
+            }),
           });
         }
       })

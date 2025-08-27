@@ -17,6 +17,8 @@ import { Input } from "./ui/input"
 import PhoneInput from "react-phone-input-2"
 import "react-phone-input-2/lib/style.css"
 import { useSocket } from "@/lib/SocketProvider"
+import { API_URL } from "@/lib/api"
+import { useNavigate } from "react-router-dom"
 
 
 export default function SignInDialog() {
@@ -40,25 +42,67 @@ export default function SignInDialog() {
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
   const { connectSocket } = useSocket();
+  const navigate = useNavigate()
+
+  // const handleLogin = async (e: React.FormEvent) => {
+  //   e.preventDefault()
+  //   const errors: typeof loginErrors = {}
+
+  //   if (!email) errors.email = "Email is required"
+  //   if (!password) errors.password = "Password is required"
+
+  //   setLoginErrors(errors)
+  //   if (Object.keys(errors).length > 0) return
+  //   try {
+  //     await dispatch(login({ email, password }))
+  //     alert("✅ Login successful! 🎉");
+  //     const user = JSON.parse(localStorage.getItem("user") || "{}");
+  //     const userId = user?.id || user?._id;
+  //     if (userId) connectSocket(userId);
+  //     setOpen(false)
+  //   } catch {
+  //     setLoginErrors({ password: "Invalid credentials" })
+  //   }
+  // }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    const errors: typeof loginErrors = {}
 
+    const errors: typeof loginErrors = {}
     if (!email) errors.email = "Email is required"
     if (!password) errors.password = "Password is required"
-
     setLoginErrors(errors)
+
     if (Object.keys(errors).length > 0) return
+
     try {
-      await dispatch(login({ email, password }))
-      alert("✅ Login successful! 🎉");
-      const user = JSON.parse(localStorage.getItem("user") || "{}");
-      const userId = user?.id || user?._id;
-      if (userId) connectSocket(userId);
+      const result = await dispatch(login({ email, password })).unwrap()
+
+      // ✅ Unwrap gives { token, user }
+      const { user } = result
+
+      if (!user?._id && !user?._id) throw new Error("User ID missing")
+      const userId = user._id || user._id
+
+      connectSocket(userId);
+
+      await fetch(`${API_URL}/api/notification/notify-now`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          title: "Login Successful",
+          message: `Welcome back, ${user.username || user.email}!`,
+          type: "login",
+        }),
+      });
+
+      alert("✅ Login successful! 🎉")
       setOpen(false)
-    } catch {
-      setLoginErrors({ password: "Invalid credentials" })
+      navigate("/") // redirect home
+    } catch (err: any) {
+      console.error("Login error:", err)
+      setLoginErrors({ password: err?.message || "Invalid credentials" })
     }
   }
 
