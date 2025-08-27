@@ -67,19 +67,19 @@ const { notifications } = useSelector((state: RootState) => state.notifications)
     }
   };
   // 🗂 Fetch notifications on mount
-  useEffect(() => {
-    if (userId && token) {
-      dispatch(getNotifications({ userId, token }));
-    }
-  }, [dispatch, userId, token]);
+useEffect(() => {
+  if (token) {
+    dispatch(getNotifications({ token }));
+  }
+}, [dispatch, token]);
 
-  const handleMarkAsRead = (id: string) => {
-    if (token) dispatch(readNotification({ id, token }));
-  };
+const handleMarkAsRead = (id: string) => {
+  if (token) dispatch(readNotification({ id, token }));
+};
 
-  const handleMarkAllAsRead = () => {
-    if (userId && token) dispatch(readAllNotifications({ userId, token }));
-  };
+const handleMarkAllAsRead = () => {
+  if (token) dispatch(readAllNotifications({ token }));
+};
 
   const getIcon = (type: string) => {
     switch (type) {

@@ -100,7 +100,7 @@ export async function createStripeOrder(token: string, payload: { items: any[]; 
 }
 
 export async function updateOrderPaymentStatus(token: string, payload: { orderId: string; paymentId: string; status: string }) {
-  const { data } = await axios.put(`${API_URL}/api/payments/payment`, payload, {
+  const { data } = await axios.put(`${API_URL}/api/payments/status`, payload, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return data;
@@ -114,8 +114,8 @@ export async function getOrders(token: string) {
 }
 
 // --- Notification ---
-export const fetchNotifications = async (userId: string, token: string) => {
-  const res = await axios.get(`${API_URL}/api/notification/${userId}`, {
+export const fetchNotifications = async (token: string) => {
+  const res = await axios.get(`${API_URL}/api/notification`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return res.data;
@@ -130,9 +130,9 @@ export const markNotificationAsRead = async (id: string, token: string) => {
   return res.data;
 };
 
-export const markAllNotificationsAsRead = async (userId: string, token: string) => {
+export const markAllNotificationsAsRead = async (token: string) => {
   const res = await axios.put(
-    `${API_URL}/api/notification/read-all/${userId}`,
+    `${API_URL}/api/notification/read-all`,
     {},
     { headers: { Authorization: `Bearer ${token}` } }
   );

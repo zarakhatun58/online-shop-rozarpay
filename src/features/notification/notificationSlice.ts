@@ -29,8 +29,8 @@ const initialState: NotificationState = {
 // 🔄 Async Thunks
 export const getNotifications = createAsyncThunk(
   "notifications/getAll",
-  async ({ userId, token }: { userId: string; token: string }) => {
-    return await fetchNotifications(userId, token);
+  async ({ token }: { token: string }) => {
+    return await fetchNotifications(token);
   }
 );
 
@@ -43,10 +43,11 @@ export const readNotification = createAsyncThunk(
 
 export const readAllNotifications = createAsyncThunk(
   "notifications/readAll",
-  async ({ userId, token }: { userId: string; token: string }) => {
-    return await markAllNotificationsAsRead(userId, token);
+  async ({ token }: { token: string }) => {
+    return await markAllNotificationsAsRead(token);
   }
 );
+
 
 // 📦 Slice
 const notificationSlice = createSlice({

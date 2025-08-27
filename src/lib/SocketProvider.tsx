@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode, } from "react";
 import { io, Socket } from "socket.io-client";
 import { useDispatch } from "react-redux";
-import { v4 as uuid } from "uuid";
 import { addNotification } from "@/features/notification/notificationSlice";
 import { API_URL } from "./api";
 
@@ -60,12 +59,12 @@ export const SocketProvider = ({ children }: Props) => {
             // Dispatch Redux notification
             dispatch(
                 addNotification({
-                    id: uuid(),
+                    id: data.id,
                     title: data.title || "Notification",
                     message: data.message,
                     type: data.type || "info",
                     read: false,
-                    createdAt: new Date().toISOString(),
+                    createdAt: data.createdAt || new Date().toISOString(),
                 })
             );
 

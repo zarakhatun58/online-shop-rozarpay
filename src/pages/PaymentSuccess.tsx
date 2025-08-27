@@ -5,6 +5,7 @@ import { clearCart } from "@/features/cart/cartSlice";
 import { fetchMyOrders, selectOrders, selectOrdersStatus } from "@/features/orders/orderSlice";
 import { RootState, AppDispatch } from "@/store";
 import { useSocket } from "@/lib/SocketProvider";
+import { API_URL } from "@/lib/api";
 
 export default function PaymentSuccess() {
   const dispatch = useDispatch<AppDispatch>();
@@ -16,39 +17,50 @@ export default function PaymentSuccess() {
   const { socket } = useSocket();
   const [cartCleared, setCartCleared] = useState(false);
 
-  useEffect(() => {
-    const orderId = searchParams.get("order_id");
-    const sessionId = searchParams.get("session_id");
+useEffect(() => {
+  const orderId = searchParams.get("order_id");
+  const sessionId = searchParams.get("session_id");
 
-    if (!orderId || !sessionId) {
-      navigate("/");
-      return;
-    }
+  if (!orderId || !sessionId) {
+    navigate("/");
+    return;
+  }
 
-    setCurrentOrderId(orderId);
+  setCurrentOrderId(orderId);
 
-    const token = localStorage.getItem("token");
-    if (token) {
-      // Fetch latest orders
-      dispatch(fetchMyOrders(token)).then((res: any) => {
-        const currentOrder = res.payload.find((o: any) => o._id === orderId);
+  const token = localStorage.getItem("token");
+  if (token) {
+    // ✅ Update order status via backend
+    fetch(`${API_URL}/api/payments/status`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ orderId, sessionId }),
+    })
+      .then((res) => res.json())
+      .then(() => {
+        // Fetch latest orders after backend update
+        dispatch(fetchMyOrders(token)).then((res: any) => {
+          const currentOrder = res.payload.find((o: any) => o._id === orderId);
 
-        // Only clear cart if payment is verified
-        if (currentOrder?.status === "paid" && !cartCleared) {
-          dispatch(clearCart());
-          setCartCleared(true);
-        }
-      });
-    }
-    alert(`Payment Successful 💳  and order ${orderId} has been completed`)
-    // Emit notification via socket
-    socket?.emit("notification", {
-      title: "Payment Successful 💳",
-      message: `Your payment for order ${orderId} has been completed!`,
-      type: "success",
-    });
+          if (currentOrder?.status === "paid" && !cartCleared) {
+            dispatch(clearCart());
+            setCartCleared(true);
+          }
+        });
+      })
+      .catch((err) => console.error("Update payment failed:", err));
+  }
 
-  }, [dispatch, navigate, searchParams, socket, cartCleared]);
+  // Socket notification
+  socket?.emit("notification", {
+    title: "Payment Successful 💳",
+    message: `Your payment for order ${orderId} has been completed!`,
+    type: "success",
+  });
+}, [dispatch, navigate, searchParams, socket, cartCleared]);
 
   if (status === "loading") {
     return (
