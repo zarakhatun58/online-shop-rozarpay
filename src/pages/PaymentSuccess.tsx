@@ -17,7 +17,7 @@ export default function PaymentSuccess() {
   const [cartCleared, setCartCleared] = useState(false);
 
   useEffect(() => {
-    const orderId = searchParams.get("order_id"); 
+    const orderId = searchParams.get("order_id");
     const sessionId = searchParams.get("session_id");
 
     if (!orderId || !sessionId) {
@@ -34,13 +34,13 @@ export default function PaymentSuccess() {
         const currentOrder = res.payload.find((o: any) => o._id === orderId);
 
         // Only clear cart if payment is verified
-        if (currentOrder?.status === "Paid" && !cartCleared) {
+        if (currentOrder?.status === "paid" && !cartCleared) {
           dispatch(clearCart());
           setCartCleared(true);
         }
       });
     }
-
+    alert(`Payment Successful 💳  and order ${orderId} has been completed`)
     // Emit notification via socket
     socket?.emit("notification", {
       title: "Payment Successful 💳",
@@ -99,9 +99,8 @@ export default function PaymentSuccess() {
             return (
               <div key={step} className="flex-1 flex flex-col items-center">
                 <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    isCompleted ? "bg-green-500 text-white" : "bg-gray-300 text-gray-600"
-                  }`}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center ${isCompleted ? "bg-green-500 text-white" : "bg-gray-300 text-gray-600"
+                    }`}
                 >
                   {idx + 1}
                 </div>
