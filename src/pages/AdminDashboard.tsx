@@ -97,7 +97,7 @@ const handleDelete = async (id: string) => {
                 <td className="py-2 px-4">
                   {product.thumbnail ? (
                     <img
-                      src={`${API_URL}${product.thumbnail}`}
+                      src={`${API_URL.replace(/\/$/, "")}${product.thumbnail}`}
                       alt={product.name}
                       className="w-12 h-12 object-cover rounded"
                     />
@@ -109,7 +109,7 @@ const handleDelete = async (id: string) => {
                   {product.images?.map((img:any, i:any) => (
                     <img
                       key={i}
-                      src={`${API_URL}${img}`}
+                      src={`${API_URL.replace(/\/$/, "")}${img}`}
                       alt={product.name}
                       className="w-8 h-8 object-cover rounded border"
                     />
@@ -129,7 +129,7 @@ const handleDelete = async (id: string) => {
                     Edit
                   </button>
                   <button
-                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+                    className="px-3 py-1 bg-[#ed3b5f] text-white rounded hover:bg-red-700"
                     onClick={() => handleDelete(product._id)}
                   >
                     Delete
