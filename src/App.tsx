@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useSearchParams } from 'react-router-dom'
 import Home from './pages/Home'
 import CartPage from './pages/Cart'
 import CheckoutPage from './pages/Checkout'
@@ -9,10 +9,26 @@ import { Elements } from '@stripe/react-stripe-js'
 import PaymentCancel from './pages/PaymentCancel'
 import PaymentSuccess from './pages/PaymentSuccess'
 import OrdersPage from './pages/OrdersPage'
+import { useEffect } from 'react'
+import { useDispatch } from 'react-redux'
+import { clearCart } from './features/cart/cartSlice'
 
 export const stripePromise = loadStripe("pk_test_51RaaB2QpJYqNVrlfiZmHRPSkE1fLvrwQv9ZmRS2dxGB2Udsp6rxjPyWyYwVICMBWEZcqC2AaqmfvLtxx8GI8yd1T00WvxWAttL");
 
 export default function App() {
+  const dispatch = useDispatch();
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get("success") === "true") {
+      alert("Payment successful!");
+      dispatch(clearCart());
+      setSearchParams({}); // clean up URL params
+    }
+    if (searchParams.get("cancelled") === "true") {
+      alert("Payment cancelled.");
+      setSearchParams({});
+    }
+  }, [searchParams, dispatch, setSearchParams]);
 
   return (
     <Layout>
