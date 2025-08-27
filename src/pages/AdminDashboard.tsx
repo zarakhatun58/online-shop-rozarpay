@@ -34,7 +34,7 @@ const handleDelete = async (id: string) => {
   if (!confirm("Are you sure you want to delete this product?")) return;
 
   try {
-    const token = localStorage.getItem("authToken") || ""; // get token as string
+    const token = localStorage.getItem("authToken"); // get token as string
 
     if (!token) {
       alert("You must be logged in as admin to delete a product");

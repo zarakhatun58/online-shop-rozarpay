@@ -305,7 +305,7 @@ const handleLogin = async (e: React.FormEvent) => {
                     required: true,
                     autoFocus: true,
                   }}
-                  inputClass="w-full !py-2 !px-3 !text-base !rounded-md border"
+                  inputClass="w-full !py-2 !px-[60px] !text-base !rounded-md border"
                 />
               </div>
               <DialogFooter>
