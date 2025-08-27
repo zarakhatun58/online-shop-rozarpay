@@ -6,20 +6,13 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 export default defineConfig({
-  server: {
-    allowedHosts: ['online-shop-rozarpay.onrender.com'],
-    proxy: {
-      '/api': {
-        target: 'https://online-shop-server-hy92.onrender.com',
-        changeOrigin: true,
-        secure: false
-      }
-    }
-  },
   plugins: [react()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src')
     }
+  },
+  build: {
+    outDir: 'dist',
   }
-});
+})
