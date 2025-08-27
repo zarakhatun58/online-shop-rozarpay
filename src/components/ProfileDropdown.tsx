@@ -30,6 +30,9 @@ export const ProfileDropdown = () => {
         <DropdownMenuLabel className="text-sm">
           {user?.username || "Anonymous"}
         </DropdownMenuLabel>
+        <DropdownMenuLabel className="text-sm">
+          {user?.role || "Anonymous"}
+        </DropdownMenuLabel>
         <DropdownMenuLabel className="text-xs text-muted-foreground">
           {user?.email || "No email"}
         </DropdownMenuLabel>

@@ -12,7 +12,7 @@ import { API_URL } from "./api";
 
 type SocketContextType = {
   socket: Socket | null;
-  connectSocket: (userId?: string) => void;
+  connectSocket: (userId?: string, onConnected?: () => void) => void; 
 };
 
 export const SocketContext = createContext<SocketContextType>({
@@ -30,7 +30,7 @@ export const SocketProvider = ({ children }: Props) => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const dispatch = useDispatch();
 
-  const connectSocket = (userIdFromArg?: string) => {
+  const connectSocket = (userIdFromArg?: string, onConnected?: () => void) => {
     const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
     const userId = userIdFromArg || storedUser?.id || storedUser?._id;
 
@@ -40,12 +40,12 @@ export const SocketProvider = ({ children }: Props) => {
     }
 
     if (socket) {
-      socket.disconnect(); // always cleanup before making new one
+      socket.disconnect(); // cleanup before new connection
     }
 
     const newSocket = io(API_URL, {
       withCredentials: true,
-      query: { userId }, // pass userId directly
+      query: { userId },
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 2000,
@@ -53,19 +53,19 @@ export const SocketProvider = ({ children }: Props) => {
 
     newSocket.on("connect", () => {
       console.log("✅ Socket connected", newSocket.id);
-      newSocket.emit("join", userId); // ensure backend registers
+      newSocket.emit("join", userId);
+      onConnected?.(); // ✅ run callback after connection
     });
 
     newSocket.on("reconnect", () => {
       console.log("♻️ Socket reconnected");
-      newSocket.emit("join", userId); // re-register after reconnect
+      newSocket.emit("join", userId);
     });
 
     newSocket.on("disconnect", () => {
       console.log("🛑 Socket disconnected");
     });
 
-    // 🔔 Listen for notifications
     newSocket.on("notification", (data: any) => {
       console.log("🔔 Notification received:", data);
       dispatch(
@@ -83,12 +83,10 @@ export const SocketProvider = ({ children }: Props) => {
     setSocket(newSocket);
   };
 
-  // Auto-connect when app loads
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
     const userId = storedUser?.id || storedUser?._id;
     if (userId) connectSocket(userId);
-
     return () => {
       socket?.disconnect();
     };

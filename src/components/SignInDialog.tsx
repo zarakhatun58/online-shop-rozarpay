@@ -65,46 +65,51 @@ export default function SignInDialog() {
   //   }
   // }
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
+const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault()
 
-    const errors: typeof loginErrors = {}
-    if (!email) errors.email = "Email is required"
-    if (!password) errors.password = "Password is required"
-    setLoginErrors(errors)
+  const errors: typeof loginErrors = {}
+  if (!email) errors.email = "Email is required"
+  if (!password) errors.password = "Password is required"
+  setLoginErrors(errors)
 
-    if (Object.keys(errors).length > 0) return
+  if (Object.keys(errors).length > 0) return
 
-    try {
-      const result = await dispatch(login({ email, password })).unwrap()
+  try {
+    // Login API call
+    const result = await dispatch(login({ email, password })).unwrap()
+    const { user } = result
 
-      // ✅ Unwrap gives { token, user }
-      const { user } = result
+    if (!user?._id) throw new Error("User ID missing")
+    const userId = user._id
 
-      if (!user?._id && !user?._id) throw new Error("User ID missing")
-      const userId = user._id || user._id
+    // Connect socket and wait until connection is ready
+    await new Promise<void>((resolve) => {
+  connectSocket(userId, () => resolve()) // ✅ callback runs when socket is connected
+})
 
-      connectSocket(userId);
+    // Send notification AFTER socket is connected
+    await fetch(`${API_URL}/api/notification/notify-now`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId,
+        title: "Login Successful",
+        message: `Welcome back, ${user.username || user.email}!`,
+        type: "login",
+      }),
+    })
 
-      await fetch(`${API_URL}/api/notification/notify-now`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          title: "Login Successful",
-          message: `Welcome back, ${user.username || user.email}!`,
-          type: "login",
-        }),
-      });
-
-      alert("✅ Login successful! 🎉")
-      setOpen(false)
-      navigate("/") // redirect home
-    } catch (err: any) {
-      console.error("Login error:", err)
-      setLoginErrors({ password: err?.message || "Invalid credentials" })
-    }
+    alert("✅ Login successful! 🎉")
+    setOpen(false)
+    navigate(user.role === "admin" ? "/admin/dashboard" : "/") // redirect accordingly
+  } catch (err: any) {
+    console.error("Login error:", err)
+    setLoginErrors({ password: err?.message || "Invalid credentials" })
   }
+}
+
+
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
