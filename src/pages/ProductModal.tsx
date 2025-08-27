@@ -147,7 +147,7 @@ export default function ProductModal({ open, onClose, product }: Props) {
               <input type="file" accept="image/*" onChange={(e) => handleImageChange(e, "thumbnail")} />
               {previewThumbnail && <img src={previewThumbnail} alt="Preview" className="w-24 h-24 mt-2 object-cover rounded" />}
             </div>
-            <div>
+            {/* <div>
               <label className="block mb-1">Other Images</label>
               <input type="file" accept="image/*" multiple onChange={(e) => handleImageChange(e, "images")} />
               <div className="flex flex-wrap mt-2 gap-2">
@@ -155,7 +155,7 @@ export default function ProductModal({ open, onClose, product }: Props) {
                   <img key={idx} src={img} alt="Preview" className="w-16 h-16 object-cover rounded" />
                 ))}
               </div>
-            </div>
+            </div> */}
           </div>
           <button
             type="submit"

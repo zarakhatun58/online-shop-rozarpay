@@ -30,19 +30,24 @@ export default function AdminDashboard() {
     dispatch(fetchProducts());
   }, [dispatch]);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this product?")) return;
-    try {
-      await axios.delete(`${API_URL}/api/products/${id}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-      });
-      dispatch(fetchProducts());
-      alert("Product deleted successfully!");
-    } catch (err) {
-      console.error(err);
-      alert("Failed to delete product");
-    }
-  };
+const handleDelete = async (id: string) => {
+  if (!confirm("Are you sure you want to delete this product?")) return;
+
+  try {
+    const token = JSON.parse(localStorage.getItem("authToken") || '""');
+
+    await axios.delete(`${API_URL}/api/products/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    dispatch(fetchProducts());
+    alert("Product deleted successfully!");
+  } catch (err) {
+    console.error(err);
+    alert("Failed to delete product");
+  }
+};
+
 
   if (status === "loading") return <p>Loading products...</p>;
   if (status === "failed") return <p>Failed to load products.</p>;
