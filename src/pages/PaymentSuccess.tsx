@@ -16,8 +16,7 @@ export default function PaymentSuccess() {
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
 const { connectSocket , socket} = useSocket();
   const [cartCleared, setCartCleared] = useState(false);
-
- useEffect(() => {
+useEffect(() => {
     const orderId = searchParams.get("order_id");
     const sessionId = searchParams.get("session_id");
 
@@ -31,14 +30,41 @@ const { connectSocket , socket} = useSocket();
     const token = localStorage.getItem("token");
     if (!token) return;
 
+    // ✅ Clear cart immediately (Option B)
+    dispatch(clearCart());
+    localStorage.removeItem("cart");
+
+    // Connect socket for notifications
     const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
     const userId = storedUser?._id || storedUser?.id;
-
     if (userId) {
       connectSocket(userId);
+
+      // Emit real-time notification
+      socket?.emit("notification", {
+        userId,
+        title: "Payment Successful 💳",
+        message: `Your payment for order ${orderId} has been completed!`,
+        type: "success",
+      });
+
+      // Persist notification in backend
+      fetch(`${API_URL}/api/notification/notify-now`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          userId,
+          title: "Payment Successful 💳",
+          message: `Your payment for order ${orderId} has been completed!`,
+          type: "success",
+        }),
+      }).catch((err) => console.error("Notification failed:", err));
     }
 
-    // ✅ Update payment status in backend
+    // Update backend payment status
     fetch(`${API_URL}/api/payments/status`, {
       method: "PUT",
       headers: {
@@ -49,40 +75,10 @@ const { connectSocket , socket} = useSocket();
     })
       .then((res) => res.json())
       .then(async () => {
-        const res: any = await dispatch(fetchMyOrders(token));
-        const currentOrder = res.payload.find((o: any) => o._id === orderId);
-
-        // ✅ Clear cart & send notifications
-        if (currentOrder?.status === "paid" && !cartCleared && userId) {
-          dispatch(clearCart());
-          setCartCleared(true);
-
-          // 1. Emit real-time notification
-          socket?.emit("notification", {
-            userId,
-            title: "Payment Successful 💳",
-            message: `Your payment for order ${orderId} has been completed!`,
-            type: "success",
-          });
-
-          // 2. Persist notification in backend
-          await fetch(`${API_URL}/api/notification/notify-now`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              userId,
-              title: "Payment Successful 💳",
-              message: `Your payment for order ${orderId} has been completed!`,
-              type: "success",
-            }),
-          });
-        }
+        await dispatch(fetchMyOrders(token));
       })
       .catch((err) => console.error("Update payment failed:", err));
-  }, [dispatch, navigate, searchParams, socket, connectSocket, cartCleared]);
+  }, [dispatch, navigate, searchParams, connectSocket, socket]);
 
   if (status === "loading") {
     return (
@@ -126,11 +122,10 @@ const { connectSocket , socket} = useSocket();
         <h2 className="text-lg font-semibold mb-4">
           Order #{currentOrder._id}
         </h2>
-
         {/* Order Progress */}
         <div className="flex items-center justify-between">
           {["Pending", "Paid", "Shipped", "Delivered"].map((step, idx) => {
-            const currentIdx = ["pending", "paid", "shipped", "delivered"].indexOf(
+             const currentIdx = ["pending", "paid", "shipped", "delivered"].indexOf(
               currentOrder.status.toLowerCase()
             );
             const isCompleted = idx <= currentIdx;
@@ -149,9 +144,7 @@ const { connectSocket , socket} = useSocket();
                 <span className="mt-2 text-sm">{step}</span>
                 {idx < 3 && (
                   <div
-                    className={`h-1 w-full ${
-                      isCompleted ? "bg-green-500" : "bg-gray-300"
-                    }`}
+                    className={`h-1 w-full ${isCompleted ? "bg-green-500" : "bg-gray-300"}`}
                   />
                 )}
               </div>
