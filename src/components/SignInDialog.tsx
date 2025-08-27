@@ -102,7 +102,7 @@ const handleLogin = async (e: React.FormEvent) => {
 
     alert("✅ Login successful! 🎉")
     setOpen(false)
-    navigate(user.role === "admin" ? "/admin/dashboard" : "/") // redirect accordingly
+    navigate(user.role === "admin" ? "/dashboard" : "/") // redirect accordingly
   } catch (err: any) {
     console.error("Login error:", err)
     setLoginErrors({ password: err?.message || "Invalid credentials" })

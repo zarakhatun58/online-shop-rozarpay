@@ -33,7 +33,7 @@ const navigate = useNavigate();
           </NavLink>
           {auth.user?.role === "admin" && (
             <NavLink
-              to="/admin/dashboard"
+              to="/dashboard"
               className={({ isActive }) =>
                 `px-2 py-1 rounded hover:bg-white/20 ${
                   isActive ? "bg-white/20" : ""
