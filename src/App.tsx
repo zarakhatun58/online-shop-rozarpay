@@ -10,7 +10,7 @@ import PaymentCancel from './pages/PaymentCancel'
 import PaymentSuccess from './pages/PaymentSuccess'
 import OrdersPage from './pages/OrdersPage'
 
-export const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+export const stripePromise = loadStripe("pk_test_51RaaB2QpJYqNVrlfiZmHRPSkE1fLvrwQv9ZmRS2dxGB2Udsp6rxjPyWyYwVICMBWEZcqC2AaqmfvLtxx8GI8yd1T00WvxWAttL");
 
 export default function App() {
 
