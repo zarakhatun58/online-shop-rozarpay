@@ -17,52 +17,7 @@ export default function CartDrawer() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
 
-  const handleCheckout = async () => {
-    if (!token) {
-      alert("Please login to checkout");
-      return;
-    }
-  
-    setLoading(true);
-  
-    try {
-      const { order, clientSecret } = await createStripeOrder(token, {
-        items,
-        amount: total,
-        address: user?.address ?? "Not provided",
-      });
-  
-      if (!stripe || !elements) return;
-  
-      const cardElement = elements.getElement(CardElement);
-      if (!cardElement) {
-        alert("Card element not found");
-        setLoading(false);
-        return;
-      }
-  
-      const result = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: { card: cardElement },
-      });
-  
-      if (result.error) {
-        alert(result.error.message);
-      } else if (result.paymentIntent?.status === "succeeded") {
-        await updateOrderPaymentStatus(token, {
-          orderId: order.payment.orderId,
-          paymentId: result.paymentIntent.id,
-          status: "paid",
-        });
-        alert("Payment successful! 🎉");
-       dispatch(clearCart());
-      }
-    } catch (err: unknown) {
-      if (err instanceof Error) alert(err.message);
-      else alert("Payment failed");
-    }
-  
-    setLoading(false);
-  };
+
 
   if (!items.length) return <p>Your cart is empty</p>
 
