@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { clearCart } from "@/features/cart/cartSlice";
 import { fetchMyOrders, selectOrders, selectOrdersStatus } from "@/features/orders/orderSlice";
-import { RootState, AppDispatch } from "@/store";
+import {  AppDispatch } from "@/store";
 import { useSocket } from "@/lib/SocketProvider";
 import { API_URL } from "@/lib/api";
 
@@ -14,23 +14,31 @@ export default function PaymentSuccess() {
   const orders = useSelector(selectOrders);
   const status = useSelector(selectOrdersStatus);
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
-  const { socket } = useSocket();
+const { connectSocket , socket} = useSocket();
   const [cartCleared, setCartCleared] = useState(false);
 
-useEffect(() => {
-  const orderId = searchParams.get("order_id");
-  const sessionId = searchParams.get("session_id");
 
-  if (!orderId || !sessionId) {
-    navigate("/");
-    return;
-  }
+ useEffect(() => {
+    const orderId = searchParams.get("order_id");
+    const sessionId = searchParams.get("session_id");
 
-  setCurrentOrderId(orderId);
+    if (!orderId || !sessionId) {
+      navigate("/");
+      return;
+    }
 
-  const token = localStorage.getItem("token");
-  if (token) {
-    // ✅ Update order status via backend
+    setCurrentOrderId(orderId);
+
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    // ✅ Ensure socket is connected with userId
+    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+    if (storedUser?._id || storedUser?.id) {
+      connectSocket(storedUser._id || storedUser.id);
+    }
+
+    // ✅ Update payment status in backend
     fetch(`${API_URL}/api/payments/status`, {
       method: "PUT",
       headers: {
@@ -40,27 +48,26 @@ useEffect(() => {
       body: JSON.stringify({ orderId, sessionId }),
     })
       .then((res) => res.json())
-      .then(() => {
-        // Fetch latest orders after backend update
-        dispatch(fetchMyOrders(token)).then((res: any) => {
-          const currentOrder = res.payload.find((o: any) => o._id === orderId);
+      .then(async () => {
+        // ✅ Refetch user orders
+        const res: any = await dispatch(fetchMyOrders(token));
+        const currentOrder = res.payload.find((o: any) => o._id === orderId);
 
-          if (currentOrder?.status === "paid" && !cartCleared) {
-            dispatch(clearCart());
-            setCartCleared(true);
-          }
-        });
+        // ✅ Clear cart only once
+        if (currentOrder?.status === "paid" && !cartCleared) {
+          dispatch(clearCart());
+          setCartCleared(true);
+
+          // ✅ Trigger socket notification
+          socket?.emit("notification", {
+            title: "Payment Successful 💳",
+            message: `Your payment for order ${orderId} has been completed!`,
+            type: "success",
+          });
+        }
       })
       .catch((err) => console.error("Update payment failed:", err));
-  }
-
-  // Socket notification
-  socket?.emit("notification", {
-    title: "Payment Successful 💳",
-    message: `Your payment for order ${orderId} has been completed!`,
-    type: "success",
-  });
-}, [dispatch, navigate, searchParams, socket, cartCleared]);
+  }, [dispatch, navigate, searchParams, socket, connectSocket, cartCleared]);
 
   if (status === "loading") {
     return (
@@ -74,17 +81,19 @@ useEffect(() => {
 
   if (!currentOrder) {
     return (
-      <div className="flex flex-col items-center justify-center h-[80vh]">
-        <h1 className="text-2xl font-bold text-green-600">✅ Payment Successful!</h1>
+      <div className="flex flex-col items-center justify-center h-[80vh] text-center">
+        <h1 className="text-2xl font-bold text-green-600">
+          ✅ Payment Successful!
+        </h1>
         <p className="text-gray-600 mt-2">
           We could not match your order automatically.
-          <button
-            onClick={() => navigate("/orders")}
-            className="ml-2 underline text-blue-600"
-          >
-            View all orders
-          </button>
         </p>
+        <button
+          onClick={() => navigate("/orders")}
+          className="mt-3 underline text-blue-600"
+        >
+          📦 View all orders
+        </button>
       </div>
     );
   }
@@ -99,8 +108,11 @@ useEffect(() => {
       </p>
 
       <div className="bg-white rounded-2xl shadow p-6">
-        <h2 className="text-lg font-semibold mb-4">Order #{currentOrder._id}</h2>
+        <h2 className="text-lg font-semibold mb-4">
+          Order #{currentOrder._id}
+        </h2>
 
+        {/* Order Progress */}
         <div className="flex items-center justify-between">
           {["Pending", "Paid", "Shipped", "Delivered"].map((step, idx) => {
             const currentIdx = ["pending", "paid", "shipped", "delivered"].indexOf(
@@ -111,15 +123,20 @@ useEffect(() => {
             return (
               <div key={step} className="flex-1 flex flex-col items-center">
                 <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center ${isCompleted ? "bg-green-500 text-white" : "bg-gray-300 text-gray-600"
-                    }`}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    isCompleted
+                      ? "bg-green-500 text-white"
+                      : "bg-gray-300 text-gray-600"
+                  }`}
                 >
                   {idx + 1}
                 </div>
                 <span className="mt-2 text-sm">{step}</span>
                 {idx < 3 && (
                   <div
-                    className={`h-1 w-full ${isCompleted ? "bg-green-500" : "bg-gray-300"}`}
+                    className={`h-1 w-full ${
+                      isCompleted ? "bg-green-500" : "bg-gray-300"
+                    }`}
                   />
                 )}
               </div>

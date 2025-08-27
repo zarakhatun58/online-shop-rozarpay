@@ -54,8 +54,8 @@ export default function SignInDialog() {
       await dispatch(login({ email, password }))
       alert("✅ Login successful! 🎉");
       const user = JSON.parse(localStorage.getItem("user") || "{}");
-    const userId = user?.id || user?._id;
-    if (userId) connectSocket(userId);
+      const userId = user?.id || user?._id;
+      if (userId) connectSocket(userId);
       setOpen(false)
     } catch {
       setLoginErrors({ password: "Invalid credentials" })
@@ -76,8 +76,8 @@ export default function SignInDialog() {
       await dispatch(register({ username, email, password }))
       alert("Signup successful! 🎉");
       const user = JSON.parse(localStorage.getItem("user") || "{}");
-    const userId = user?.id || user?._id;
-    if (userId) connectSocket(userId);
+      const userId = user?.id || user?._id;
+      if (userId) connectSocket(userId);
       setOpen(false)
     } catch {
       setRegisterErrors({ email: "Signup failed, try another email" })
