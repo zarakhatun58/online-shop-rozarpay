@@ -6,8 +6,9 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export default defineConfig(() => ({
+export default defineConfig({
   server: {
+    allowedHosts: ['online-shop-rozarpay.onrender.com'],
     host: "::",
     port: 5173,
     proxy: {
@@ -15,20 +16,13 @@ export default defineConfig(() => ({
         target: 'https://online-shop-server-hy92.onrender.com',
         changeOrigin: true,
         secure: false,
-        configure: (proxy, options) => {
-          // Set COOP/COEP headers for dev
-          proxy.on('proxyRes', (proxyRes, req, res) => {
-            res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-            res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
-          });
-        },
       },
     },
   },
   plugins: [react()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"), 
+      "@": path.resolve(__dirname, "./src"),
     },
   },
-}));
+});
