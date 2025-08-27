@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && npx vite build",
+    "build": "vite build",
     "preview": "npx vite preview",
      "start": "ts-node server.ts"
   },

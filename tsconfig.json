@@ -25,6 +25,5 @@
   },
   "include": [
     "src",
-    "src/lib/razorpay.d.ts"
   ]
 }

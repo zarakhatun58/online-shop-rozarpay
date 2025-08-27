@@ -2,7 +2,7 @@ import express from 'express';
 import path from 'path';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = 5123
 
 // Serve static files from the Vite build output
 const __dirname = path.resolve();
