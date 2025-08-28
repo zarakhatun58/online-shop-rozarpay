@@ -16,61 +16,61 @@ export default function PaymentSuccess() {
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
   const { connectSocket, socket } = useSocket();
 
-useEffect(() => {
-  const orderId = searchParams.get("order_id");
-  const token = localStorage.getItem("token");
-  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-  const userId = storedUser?._id || storedUser?.id;
+  useEffect(() => {
+    const orderId = searchParams.get("order_id");
+    const token = localStorage.getItem("token");
+    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+    const userId = storedUser?._id || storedUser?.id;
 
-  if (!userId || !token || !orderId) return;
+    if (!userId || !token || !orderId) return;
 
-  // 1️⃣ Connect socket
-  connectSocket(userId);
+    // 1️⃣ Connect socket
+    connectSocket(userId);
 
-  // 2️⃣ Listen for real-time notifications
-  socket?.on("notification", (notif) => {
-    console.log("📩 New notification:", notif);
+    // 2️⃣ Listen for real-time notifications
+    socket?.on("notification", (notif) => {
+      console.log("📩 New notification:", notif);
 
-    // If it's about this order, refresh orders
-    if (notif?.userId === userId) {
-      dispatch(fetchMyOrders(token));
-    }
-  });
+      // If it's about this order, refresh orders
+      if (notif?.userId === userId) {
+        dispatch(fetchMyOrders(token));
+      }
+    });
 
-  // 3️⃣ Fetch updated orders and verify payment
-  dispatch(fetchMyOrders(token)).then((res: any) => {
-    const updatedOrder = res?.payload?.find((o: any) => o._id === orderId);
+    // 3️⃣ Fetch updated orders and verify payment
+    dispatch(fetchMyOrders(token)).then((res: any) => {
+      const updatedOrder = res?.payload?.find((o: any) => o._id === orderId);
 
-    if (updatedOrder?.status === "paid") {
-      // Clear cart after confirmed payment
-      dispatch(clearCart());
-      localStorage.removeItem("cart");
+      if (updatedOrder?.status === "paid") {
+        // Clear cart after confirmed payment
+        dispatch(clearCart());
+        localStorage.removeItem("cart");
 
-      // Set order to display
-      setCurrentOrderId(orderId);
+        // Set order to display
+        setCurrentOrderId(orderId);
 
-      // Send success notification
-      const title = "Payment Successful 💳";
-      const message = `Your payment for order ${orderId} has been completed!`;
+        // Send success notification
+        const title = "Payment Successful 💳";
+        const message = `Your payment for order ${orderId} has been completed!`;
 
-      socket?.emit("notification", { userId, title, message, type: "success" });
+        socket?.emit("notification", { userId, title, message, type: "success" });
 
-      fetch(`${API_URL}/api/notification/notify-now`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ userId, title, message, type: "success" }),
-      }).catch((err) => console.error("Notification failed:", err));
-    }
-  });
+        fetch(`${API_URL}/api/notification/notify-now`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ userId, title, message, type: "success" }),
+        }).catch((err) => console.error("Notification failed:", err));
+      }
+    });
 
-  // 4️⃣ Cleanup socket listener on unmount
-  return () => {
-    socket?.off("notification");
-  };
-}, [dispatch, searchParams, connectSocket, socket]);
+    // 4️⃣ Cleanup socket listener on unmount
+    return () => {
+      socket?.off("notification");
+    };
+  }, [dispatch, searchParams, connectSocket, socket]);
 
 
 
@@ -84,6 +84,12 @@ useEffect(() => {
         <p className="text-gray-600 mt-2">We could not match your order automatically.</p>
         <button onClick={() => navigate("/orders")} className="mt-3 underline text-blue-600">
           📦 View all orders
+        </button>
+        <button
+          onClick={() => navigate("/orders/:id")}
+          className="mt-6 px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
+          📦 Track Orders
         </button>
       </div>
     );
@@ -135,12 +141,7 @@ useEffect(() => {
       >
         📦 View All Orders
       </button>
-      <button
-        onClick={() => navigate("/orders/:id")}
-        className="mt-6 px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-      >
-        📦 Track Orders
-      </button>
+
     </div>
   );
 }
