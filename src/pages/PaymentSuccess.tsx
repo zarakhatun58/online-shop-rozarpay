@@ -16,73 +16,78 @@ export default function PaymentSuccess() {
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
   const { connectSocket, socket } = useSocket();
 
-  useEffect(() => {
-    const orderId = searchParams.get("order_id");
-    const token = localStorage.getItem("token");
-    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-    const userId = storedUser?._id || storedUser?.id;
+useEffect(() => {
+  const orderId = searchParams.get("order_id");
+  const token = localStorage.getItem("token");
+  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const userId = storedUser?._id || storedUser?.id;
 
-    if (!userId || !token || !orderId) return;
+  if (!userId || !token || !orderId) return;
 
-    // 1️⃣ Connect socket
-    connectSocket(userId);
+  setCurrentOrderId(orderId);
 
-    // 2️⃣ Listen for real-time notifications
-    socket?.on("notification", (notif) => {
-      console.log("📩 New notification:", notif);
+  connectSocket(userId);
 
-      // If it's about this order, refresh orders
-      if (notif?.userId === userId) {
-        dispatch(fetchMyOrders(token));
-      }
-    });
+  socket?.on("notification", (notif) => {
+    console.log("📩 New notification:", notif);
 
-    // 3️⃣ Fetch updated orders and verify payment
-    dispatch(fetchMyOrders(token)).then((res: any) => {
-      const updatedOrder = res?.payload?.find((o: any) => o._id === orderId);
+    if (notif?.userId === userId) {
+      dispatch(fetchMyOrders(token));
+    }
+  });
 
-      if (updatedOrder?.status === "paid") {
-        // Clear cart after confirmed payment
-        dispatch(clearCart());
-        localStorage.removeItem("cart");
+  const checkPayment = async () => {
+    const res: any = await dispatch(fetchMyOrders(token));
+    const updatedOrder = res?.payload?.find((o: any) => o._id === orderId);
 
-        // Set order to display
-        setCurrentOrderId(orderId);
+    if (updatedOrder?.status === "paid") {
+      dispatch(clearCart());
+      localStorage.removeItem("cart");
 
-        // Send success notification
-        const title = "Payment Successful 💳";
-        const message = `Your payment for order ${orderId} has been completed!`;
+      const title = "Payment Successful 💳";
+      const message = `Your payment for order ${orderId} has been completed!`;
 
-        socket?.emit("notification", { userId, title, message, type: "success" });
+      socket?.emit("notification", { userId, title, message, type: "success" });
 
-        fetch(`${API_URL}/api/notification/notify-now`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ userId, title, message, type: "success" }),
-        }).catch((err) => console.error("Notification failed:", err));
-      }
-    });
+      fetch(`${API_URL}/api/notification/notify-now`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ userId, title, message, type: "success" }),
+      }).catch((err) => console.error("Notification failed:", err));
+    } else {
+      setTimeout(checkPayment, 3000);
+    }
+  };
 
-    // 4️⃣ Cleanup socket listener on unmount
-    return () => {
-      socket?.off("notification");
-    };
-  }, [dispatch, searchParams, connectSocket, socket]);
+  checkPayment();
+
+  return () => {
+    socket?.off("notification");
+  };
+}, [dispatch, searchParams, connectSocket, socket]);
 
 
 
+    const currentOrder = orders.find((o) => o._id === currentOrderId);
 
-  const currentOrder = orders.find((o) => o._id === currentOrderId);
-  if (status === "loading") return <p className="text-center mt-8">Loading order...</p>;
+  // 1️⃣ Loading state
+  if (status === "loading") {
+    return <p className="text-center mt-8">Loading order...</p>;
+  }
+
+  // 2️⃣ Fallback when no order is found
   if (!currentOrder) {
     return (
       <div className="flex flex-col items-center justify-center h-[80vh] text-center">
         <h1 className="text-2xl font-bold text-green-600">✅ Payment Successful!</h1>
         <p className="text-gray-600 mt-2">We could not match your order automatically.</p>
-        <button onClick={() => navigate("/orders")} className="mt-3 underline text-blue-600">
+        <button
+          onClick={() => navigate("/orders")}
+          className="mt-3 underline text-blue-600"
+        >
           📦 View all orders
         </button>
         <button
@@ -94,10 +99,26 @@ export default function PaymentSuccess() {
       </div>
     );
   }
+
+  // 3️⃣ Payment still pending (webhook didn’t update yet)
+  if (currentOrder.status.toLowerCase() === "pending") {
+    return (
+      <div className="flex flex-col items-center justify-center h-[80vh] text-center">
+        <h1 className="text-2xl font-bold text-yellow-600">⏳ Payment Processing...</h1>
+        <p className="text-gray-600 mt-2">
+          We are confirming your payment. This may take a few seconds.
+        </p>
+        <p className="text-gray-500 mt-1 text-sm">Please don’t close this page.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-2xl mx-auto p-6">
       <h1 className="text-2xl font-bold text-green-600 mb-4">✅ Payment Successful!</h1>
-      <p className="text-gray-700 mb-6">Thank you for your order. Here’s the status of your purchase:</p>
+      <p className="text-gray-700 mb-6">
+        Thank you for your order. Here’s the status of your purchase:
+      </p>
 
       <div className="bg-white rounded-2xl shadow p-6">
         <h2 className="text-lg font-semibold mb-4">Order #{currentOrder._id}</h2>
@@ -114,7 +135,7 @@ export default function PaymentSuccess() {
                 {/* Step Circle */}
                 <div
                   className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold
-          ${isCompleted ? "bg-green-500 text-white" : "bg-gray-300 text-gray-600"}`}
+                    ${isCompleted ? "bg-green-500 text-white" : "bg-gray-300 text-gray-600"}`}
                 >
                   {idx + 1}
                 </div>
@@ -126,7 +147,7 @@ export default function PaymentSuccess() {
                 {idx < arr.length - 1 && (
                   <div
                     className={`absolute top-5 left-1/2 w-full h-1 -translate-y-1/2
-            ${isCompleted ? "bg-green-500" : "bg-gray-300"}`}
+                      ${isCompleted ? "bg-green-500" : "bg-gray-300"}`}
                   />
                 )}
               </div>
@@ -141,7 +162,6 @@ export default function PaymentSuccess() {
       >
         📦 View All Orders
       </button>
-
     </div>
-  );
-}
+  )
+};
