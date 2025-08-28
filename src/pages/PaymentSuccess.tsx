@@ -23,52 +23,59 @@ useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
     const userId = storedUser?._id || storedUser?.id;
 
-    if (!orderId || !sessionId || !token) {
-      navigate("/");
+    if (!token) {
+      navigate("/login");
       return;
     }
-    setCurrentOrderId(orderId);
+
+    // Connect socket for notifications
+    if (userId) connectSocket(userId);
+
+    // Clear cart after successful payment
     dispatch(clearCart());
     localStorage.removeItem("cart");
-    if (userId) {
-      connectSocket(userId);
 
-      socket?.emit("notification", {
-        userId,
-        title: "Payment Successful 💳",
-        message: `Your payment for order ${orderId} has been completed!`,
-        type: "success",
-      });
-
+    const handleNotification = (id: string, title: string, message: string) => {
+      socket?.emit("notification", { userId: id, title, message, type: "success" });
       fetch(`${API_URL}/api/notification/notify-now`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          userId,
-          title: "Payment Successful 💳",
-          message: `Your payment for order ${orderId} has been completed!`,
-          type: "success",
-        }),
+        body: JSON.stringify({ userId: id, title, message, type: "success" }),
       }).catch((err) => console.error("Notification failed:", err));
-    }
-    fetch(`${API_URL}/api/payments/status`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ orderId, sessionId }),
-    })
-      .then((res) => res.json())
-      .then(() => dispatch(fetchMyOrders(token)))
-      .catch((err) => console.error("Update payment failed:", err));
-  }, [dispatch, navigate, searchParams, connectSocket, socket]);
+    };
 
-const currentOrder = orders.find((o) => o._id === currentOrderId);
+    const updatePaymentStatus = async () => {
+      if (orderId && sessionId) {
+        try {
+          await fetch(`${API_URL}/api/payments/status`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ orderId, sessionId }),
+          });
+          handleNotification(userId, "Payment Successful 💳", `Your payment for order ${orderId} has been completed!`);
+        } catch (err) {
+          console.error("Update payment failed:", err);
+        }
+      }
+      await dispatch(fetchMyOrders(token));
+    };
 
+    updatePaymentStatus().then(() => {
+      // Set current order to the one in query OR fallback to last order
+      setCurrentOrderId(orderId || orders[0]?._id || null);
+    });
+
+  }, [dispatch, navigate, searchParams, connectSocket, socket, orders]);
+
+
+  const currentOrder = orders.find((o) => o._id === currentOrderId);
+if (status === "loading") return <p className="text-center mt-8">Loading order...</p>;
   if (!currentOrder) {
     return (
       <div className="flex flex-col items-center justify-center h-[80vh] text-center">
