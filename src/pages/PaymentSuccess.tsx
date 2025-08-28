@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { clearCart } from "@/features/cart/cartSlice";
 import { fetchMyOrders, selectOrders, selectOrdersStatus } from "@/features/orders/orderSlice";
-import {  AppDispatch } from "@/store";
+import { AppDispatch } from "@/store";
 import { useSocket } from "@/lib/SocketProvider";
 import { API_URL } from "@/lib/api";
 
@@ -14,68 +14,47 @@ export default function PaymentSuccess() {
   const orders = useSelector(selectOrders);
   const status = useSelector(selectOrdersStatus);
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
-const { connectSocket , socket} = useSocket();
+  const { connectSocket, socket } = useSocket();
 
-useEffect(() => {
+ useEffect(() => {
     const orderId = searchParams.get("order_id");
-    const sessionId = searchParams.get("session_id");
     const token = localStorage.getItem("token");
     const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
     const userId = storedUser?._id || storedUser?.id;
 
-    if (!token) {
-      navigate("/login");
-      return;
-    }
+    if (!userId || !token) return;
 
-    // Connect socket for notifications
-    if (userId) connectSocket(userId);
+    // Connect socket
+    connectSocket(userId);
 
-    // Clear cart after successful payment
+    // Clear cart
     dispatch(clearCart());
     localStorage.removeItem("cart");
 
-    const handleNotification = (id: string, title: string, message: string) => {
-      socket?.emit("notification", { userId: id, title, message, type: "success" });
-      fetch(`${API_URL}/api/notification/notify-now`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ userId: id, title, message, type: "success" }),
-      }).catch((err) => console.error("Notification failed:", err));
-    };
+    // Send notification
+    const title = "Payment Successful 💳";
+    const message = `Your payment for order ${orderId || ""} has been completed!`;
 
-    const updatePaymentStatus = async () => {
-      if (orderId && sessionId) {
-        try {
-          await fetch(`${API_URL}/api/payments/status`, {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ orderId, sessionId }),
-          });
-          handleNotification(userId, "Payment Successful 💳", `Your payment for order ${orderId} has been completed!`);
-        } catch (err) {
-          console.error("Update payment failed:", err);
-        }
-      }
-      await dispatch(fetchMyOrders(token));
-    };
+    socket?.emit("notification", { userId, title, message, type: "success" });
+    fetch(`${API_URL}/api/notification/notify-now`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ userId, title, message, type: "success" }),
+    }).catch((err) => console.error("Notification failed:", err));
 
-    updatePaymentStatus().then(() => {
-      // Set current order to the one in query OR fallback to last order
-      setCurrentOrderId(orderId || orders[0]?._id || null);
+    // Fetch updated orders
+    dispatch(fetchMyOrders(token)).then(() => {
+      setCurrentOrderId(orderId || null);
     });
+  }, [dispatch, searchParams, connectSocket, socket]);
 
-  }, [dispatch, navigate, searchParams, connectSocket, socket, orders]);
 
 
   const currentOrder = orders.find((o) => o._id === currentOrderId);
-if (status === "loading") return <p className="text-center mt-8">Loading order...</p>;
+  if (status === "loading") return <p className="text-center mt-8">Loading order...</p>;
   if (!currentOrder) {
     return (
       <div className="flex flex-col items-center justify-center h-[80vh] text-center">
@@ -97,25 +76,29 @@ if (status === "loading") return <p className="text-center mt-8">Loading order..
 
         {/* Order Progress */}
         <div className="flex items-center justify-between">
-          {["Pending", "Paid", "Shipped", "Delivered"].map((step, idx) => {
-            const currentIdx = ["pending", "paid", "shipped", "delivered"].indexOf(
-              currentOrder.status.toLowerCase()
-            );
+          {["Pending", "Paid", "Shipped", "Delivered"].map((step, idx, arr) => {
+            const steps = ["pending", "paid", "shipped", "delivered"];
+            const currentIdx = steps.indexOf(currentOrder.status.toLowerCase());
             const isCompleted = idx <= currentIdx;
 
             return (
-              <div key={step} className="flex-1 flex flex-col items-center">
+              <div key={step} className="flex-1 flex flex-col items-center relative">
+                {/* Step Circle */}
                 <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    isCompleted ? "bg-green-500 text-white" : "bg-gray-300 text-gray-600"
-                  }`}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold
+          ${isCompleted ? "bg-green-500 text-white" : "bg-gray-300 text-gray-600"}`}
                 >
                   {idx + 1}
                 </div>
+
+                {/* Step Label */}
                 <span className="mt-2 text-sm">{step}</span>
-                {idx < 3 && (
+
+                {/* Connector Line */}
+                {idx < arr.length - 1 && (
                   <div
-                    className={`h-1 w-full ${isCompleted ? "bg-green-500" : "bg-gray-300"}`}
+                    className={`absolute top-5 left-1/2 w-full h-1 -translate-y-1/2
+            ${isCompleted ? "bg-green-500" : "bg-gray-300"}`}
                   />
                 )}
               </div>
