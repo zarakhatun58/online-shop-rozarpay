@@ -14,7 +14,6 @@ import { Card, CardContent } from "./ui/card"
 import { Button } from "./ui/Button"
 import { Label } from "./ui/label"
 import { Input } from "./ui/input"
-import "react-phone-input-2/lib/style.css"
 import { useSocket } from "@/lib/SocketProvider"
 import { API_URL } from "@/lib/api"
 import { useNavigate } from "react-router-dom"
@@ -135,7 +134,7 @@ export default function SignInDialog() {
     e.preventDefault();
     try {
       await dispatch(forgotPasswordAction({ email })).unwrap();
-      alert("OTP sent to your phone. Enter OTP to continue.");
+      alert("OTP sent to your email. Enter OTP to continue.");
       setOtpSent(true);
     } catch (err: any) {
       alert(err || "Failed to send OTP");
@@ -285,12 +284,12 @@ export default function SignInDialog() {
             <DialogTitle>Reset Your Password</DialogTitle>
             <DialogDescription>
               {otpSent && !otpVerified
-                ? "Enter the OTP sent to your phone."
-                : "Enter your phone number to receive an OTP."}
+                ? "Enter the OTP sent to your email."
+                : "Enter your email number to receive an OTP."}
             </DialogDescription>
           </DialogHeader>
 
-          {/* Step 1: Enter Phone */}
+          {/* Step 1: Enter email */}
           {!otpSent && (
             <form onSubmit={handleForgotPassword} className="space-y-4 bg-background">
               <div className="space-y-2">
