@@ -17,6 +17,7 @@ import { Input } from "./ui/input"
 import { useSocket } from "@/lib/SocketProvider"
 import { API_URL } from "@/lib/api"
 import { useNavigate } from "react-router-dom"
+import { clearCart } from "@/features/cart/cartSlice"
 
 
 export default function SignInDialog() {
@@ -42,26 +43,6 @@ export default function SignInDialog() {
   const { connectSocket } = useSocket();
   const navigate = useNavigate()
 
-  // const handleLogin = async (e: React.FormEvent) => {
-  //   e.preventDefault()
-  //   const errors: typeof loginErrors = {}
-
-  //   if (!email) errors.email = "Email is required"
-  //   if (!password) errors.password = "Password is required"
-
-  //   setLoginErrors(errors)
-  //   if (Object.keys(errors).length > 0) return
-  //   try {
-  //     await dispatch(login({ email, password }))
-  //     alert("✅ Login successful! 🎉");
-  //     const user = JSON.parse(localStorage.getItem("user") || "{}");
-  //     const userId = user?.id || user?._id;
-  //     if (userId) connectSocket(userId);
-  //     setOpen(false)
-  //   } catch {
-  //     setLoginErrors({ password: "Invalid credentials" })
-  //   }
-  // }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -74,19 +55,15 @@ export default function SignInDialog() {
     if (Object.keys(errors).length > 0) return
 
     try {
-      // Login API call
       const result = await dispatch(login({ email, password })).unwrap()
       const { user } = result
 
       if (!user?._id) throw new Error("User ID missing")
       const userId = user._id
-
-      // Connect socket and wait until connection is ready
       await new Promise<void>((resolve) => {
-        connectSocket(userId, () => resolve()) // ✅ callback runs when socket is connected
+        connectSocket(userId, () => resolve()) 
       })
 
-      // Send notification AFTER socket is connected
       await fetch(`${API_URL}/api/notification/notify-now`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -99,6 +76,7 @@ export default function SignInDialog() {
       })
 
       alert("✅ Login successful! 🎉")
+      dispatch(clearCart())
       setOpen(false)
       navigate(user.role === "admin" ? "/dashboard" : "/") // redirect accordingly
     } catch (err: any) {
@@ -106,8 +84,6 @@ export default function SignInDialog() {
       setLoginErrors({ password: err?.message || "Invalid credentials" })
     }
   }
-
-
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -122,6 +98,7 @@ export default function SignInDialog() {
     try {
       await dispatch(register({ username, email, password }))
       alert("Signup successful! 🎉");
+      dispatch(clearCart())
       const user = JSON.parse(localStorage.getItem("user") || "{}");
       const userId = user?.id || user?._id;
       if (userId) connectSocket(userId);
@@ -160,6 +137,8 @@ export default function SignInDialog() {
       alert("Password reset successful. Please log in.");
       setOtpSent(false);
       setOtpVerified(false);
+       setResetPasswordOpen(false);
+       setNewPassword("")
     } catch (err: any) {
       alert(err || "Failed to reset password");
     }

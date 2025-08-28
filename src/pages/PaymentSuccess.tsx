@@ -15,32 +15,24 @@ export default function PaymentSuccess() {
   const status = useSelector(selectOrdersStatus);
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
 const { connectSocket , socket} = useSocket();
-  const [cartCleared, setCartCleared] = useState(false);
+
 useEffect(() => {
     const orderId = searchParams.get("order_id");
     const sessionId = searchParams.get("session_id");
+    const token = localStorage.getItem("token");
+    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+    const userId = storedUser?._id || storedUser?.id;
 
-    if (!orderId || !sessionId) {
+    if (!orderId || !sessionId || !token) {
       navigate("/");
       return;
     }
-
     setCurrentOrderId(orderId);
-
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
-    // ✅ Clear cart immediately (Option B)
     dispatch(clearCart());
     localStorage.removeItem("cart");
-
-    // Connect socket for notifications
-    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-    const userId = storedUser?._id || storedUser?.id;
     if (userId) {
       connectSocket(userId);
 
-      // Emit real-time notification
       socket?.emit("notification", {
         userId,
         title: "Payment Successful 💳",
@@ -48,7 +40,6 @@ useEffect(() => {
         type: "success",
       });
 
-      // Persist notification in backend
       fetch(`${API_URL}/api/notification/notify-now`, {
         method: "POST",
         headers: {
@@ -63,8 +54,6 @@ useEffect(() => {
         }),
       }).catch((err) => console.error("Notification failed:", err));
     }
-
-    // Update backend payment status
     fetch(`${API_URL}/api/payments/status`, {
       method: "PUT",
       headers: {
@@ -74,58 +63,35 @@ useEffect(() => {
       body: JSON.stringify({ orderId, sessionId }),
     })
       .then((res) => res.json())
-      .then(async () => {
-        await dispatch(fetchMyOrders(token));
-      })
+      .then(() => dispatch(fetchMyOrders(token)))
       .catch((err) => console.error("Update payment failed:", err));
   }, [dispatch, navigate, searchParams, connectSocket, socket]);
 
-  if (status === "loading") {
-    return (
-      <div className="flex flex-col items-center justify-center h-[80vh]">
-        <h1 className="text-xl font-semibold">Fetching your order...</h1>
-      </div>
-    );
-  }
-
-  const currentOrder = orders.find((o) => o._id === currentOrderId);
+const currentOrder = orders.find((o) => o._id === currentOrderId);
 
   if (!currentOrder) {
     return (
       <div className="flex flex-col items-center justify-center h-[80vh] text-center">
-        <h1 className="text-2xl font-bold text-green-600">
-          ✅ Payment Successful!
-        </h1>
-        <p className="text-gray-600 mt-2">
-          We could not match your order automatically.
-        </p>
-        <button
-          onClick={() => navigate("/orders")}
-          className="mt-3 underline text-blue-600"
-        >
+        <h1 className="text-2xl font-bold text-green-600">✅ Payment Successful!</h1>
+        <p className="text-gray-600 mt-2">We could not match your order automatically.</p>
+        <button onClick={() => navigate("/orders")} className="mt-3 underline text-blue-600">
           📦 View all orders
         </button>
       </div>
     );
   }
-
   return (
     <div className="max-w-2xl mx-auto p-6">
-      <h1 className="text-2xl font-bold text-green-600 mb-4">
-        ✅ Payment Successful!
-      </h1>
-      <p className="text-gray-700 mb-6">
-        Thank you for your order. Here’s the status of your purchase:
-      </p>
+      <h1 className="text-2xl font-bold text-green-600 mb-4">✅ Payment Successful!</h1>
+      <p className="text-gray-700 mb-6">Thank you for your order. Here’s the status of your purchase:</p>
 
       <div className="bg-white rounded-2xl shadow p-6">
-        <h2 className="text-lg font-semibold mb-4">
-          Order #{currentOrder._id}
-        </h2>
+        <h2 className="text-lg font-semibold mb-4">Order #{currentOrder._id}</h2>
+
         {/* Order Progress */}
         <div className="flex items-center justify-between">
           {["Pending", "Paid", "Shipped", "Delivered"].map((step, idx) => {
-             const currentIdx = ["pending", "paid", "shipped", "delivered"].indexOf(
+            const currentIdx = ["pending", "paid", "shipped", "delivered"].indexOf(
               currentOrder.status.toLowerCase()
             );
             const isCompleted = idx <= currentIdx;
@@ -134,9 +100,7 @@ useEffect(() => {
               <div key={step} className="flex-1 flex flex-col items-center">
                 <div
                   className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    isCompleted
-                      ? "bg-green-500 text-white"
-                      : "bg-gray-300 text-gray-600"
+                    isCompleted ? "bg-green-500 text-white" : "bg-gray-300 text-gray-600"
                   }`}
                 >
                   {idx + 1}
