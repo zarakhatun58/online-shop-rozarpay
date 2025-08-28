@@ -48,17 +48,17 @@ export async function getProfile(token: string) {
   return data
 }
 
-export async function forgotPassword(payload: { phone: string }) {
+export async function forgotPassword(payload: { email: string }) {
   const { data } = await axios.post(`${API_URL}/api/auth/forgot-password`, payload)
   return data
 }
 
-export async function verifyOtp(payload: { phone: string; otp: string }) {
+export async function verifyOtp(payload: { email: string; otp: string }) {
   const { data } = await axios.post(`${API_URL}/api/auth/verify-otp`, payload)
   return data
 }
 
-export async function resetPassword(payload: { phone: string; newPassword: string }) {
+export async function resetPassword(payload: { email: string; newPassword: string }) {
   const { data } = await axios.post(`${API_URL}/api/auth/reset-password`, payload)
   return data
 }

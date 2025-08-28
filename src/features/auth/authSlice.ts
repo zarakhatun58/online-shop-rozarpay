@@ -90,7 +90,7 @@ export const fetchProfile = createAsyncThunk<
 // FORGOT PASSWORD (Send OTP) -- typed rejectValue so rejected payload is string
 export const forgotPasswordAction = createAsyncThunk<
   { message: string },
-  { phone: string },
+  { email: string },
   { rejectValue: string }
 >("auth/forgotPassword", async (payload, { rejectWithValue }) => {
   try {
@@ -103,7 +103,7 @@ export const forgotPasswordAction = createAsyncThunk<
 // VERIFY OTP
 export const verifyOtpAction = createAsyncThunk<
   { message: string },
-  { phone: string; otp: string },
+  { email: string; otp: string },
   { rejectValue: string }
 >("auth/verifyOtp", async (payload, { rejectWithValue }) => {
   try {
@@ -116,7 +116,7 @@ export const verifyOtpAction = createAsyncThunk<
 // RESET PASSWORD
 export const resetPasswordAction = createAsyncThunk<
   { message: string },
-  { phone: string; newPassword: string },
+  { email: string; newPassword: string },
   { rejectValue: string }
 >("auth/resetPassword", async (payload, { rejectWithValue }) => {
   try {

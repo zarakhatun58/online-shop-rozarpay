@@ -14,7 +14,6 @@ import { Card, CardContent } from "./ui/card"
 import { Button } from "./ui/Button"
 import { Label } from "./ui/label"
 import { Input } from "./ui/input"
-import PhoneInput from "react-phone-input-2"
 import "react-phone-input-2/lib/style.css"
 import { useSocket } from "@/lib/SocketProvider"
 import { API_URL } from "@/lib/api"
@@ -37,7 +36,7 @@ export default function SignInDialog() {
   const auth = useSelector(selectAuth)
   const [loginErrors, setLoginErrors] = useState<{ email?: string; password?: string }>({})
   const [registerErrors, setRegisterErrors] = useState<{ username?: string; email?: string; password?: string }>({})
-  const [phone, setPhone] = useState("");
+
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
@@ -65,49 +64,49 @@ export default function SignInDialog() {
   //   }
   // }
 
-const handleLogin = async (e: React.FormEvent) => {
-  e.preventDefault()
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
 
-  const errors: typeof loginErrors = {}
-  if (!email) errors.email = "Email is required"
-  if (!password) errors.password = "Password is required"
-  setLoginErrors(errors)
+    const errors: typeof loginErrors = {}
+    if (!email) errors.email = "Email is required"
+    if (!password) errors.password = "Password is required"
+    setLoginErrors(errors)
 
-  if (Object.keys(errors).length > 0) return
+    if (Object.keys(errors).length > 0) return
 
-  try {
-    // Login API call
-    const result = await dispatch(login({ email, password })).unwrap()
-    const { user } = result
+    try {
+      // Login API call
+      const result = await dispatch(login({ email, password })).unwrap()
+      const { user } = result
 
-    if (!user?._id) throw new Error("User ID missing")
-    const userId = user._id
+      if (!user?._id) throw new Error("User ID missing")
+      const userId = user._id
 
-    // Connect socket and wait until connection is ready
-    await new Promise<void>((resolve) => {
-  connectSocket(userId, () => resolve()) // ✅ callback runs when socket is connected
-})
+      // Connect socket and wait until connection is ready
+      await new Promise<void>((resolve) => {
+        connectSocket(userId, () => resolve()) // ✅ callback runs when socket is connected
+      })
 
-    // Send notification AFTER socket is connected
-    await fetch(`${API_URL}/api/notification/notify-now`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userId,
-        title: "Login Successful",
-        message: `Welcome back, ${user.username || user.email}!`,
-        type: "login",
-      }),
-    })
+      // Send notification AFTER socket is connected
+      await fetch(`${API_URL}/api/notification/notify-now`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          title: "Login Successful",
+          message: `Welcome back, ${user.username || user.email}!`,
+          type: "login",
+        }),
+      })
 
-    alert("✅ Login successful! 🎉")
-    setOpen(false)
-    navigate(user.role === "admin" ? "/dashboard" : "/") // redirect accordingly
-  } catch (err: any) {
-    console.error("Login error:", err)
-    setLoginErrors({ password: err?.message || "Invalid credentials" })
+      alert("✅ Login successful! 🎉")
+      setOpen(false)
+      navigate(user.role === "admin" ? "/dashboard" : "/") // redirect accordingly
+    } catch (err: any) {
+      console.error("Login error:", err)
+      setLoginErrors({ password: err?.message || "Invalid credentials" })
+    }
   }
-}
 
 
 
@@ -135,7 +134,7 @@ const handleLogin = async (e: React.FormEvent) => {
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await dispatch(forgotPasswordAction({ phone })).unwrap();
+      await dispatch(forgotPasswordAction({ email })).unwrap();
       alert("OTP sent to your phone. Enter OTP to continue.");
       setOtpSent(true);
     } catch (err: any) {
@@ -145,7 +144,7 @@ const handleLogin = async (e: React.FormEvent) => {
 
   const handleVerifyOtp = async (): Promise<boolean> => {
     try {
-      await dispatch(verifyOtpAction({ phone, otp })).unwrap()
+      await dispatch(verifyOtpAction({ email, otp })).unwrap()
       alert("OTP verified successfully. You can now reset your password.")
       return true
     } catch (err: any) {
@@ -158,7 +157,7 @@ const handleLogin = async (e: React.FormEvent) => {
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await dispatch(resetPasswordAction({ phone, newPassword })).unwrap();
+      await dispatch(resetPasswordAction({ email, newPassword })).unwrap();
       alert("Password reset successful. Please log in.");
       setOtpSent(false);
       setOtpVerified(false);
@@ -295,17 +294,13 @@ const handleLogin = async (e: React.FormEvent) => {
           {!otpSent && (
             <form onSubmit={handleForgotPassword} className="space-y-4 bg-background">
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
-                <PhoneInput
-                  country={"in"}
-                  value={phone}
-                  onChange={(value) => setPhone(value)}
-                  inputProps={{
-                    name: "phone",
-                    required: true,
-                    autoFocus: true,
-                  }}
-                  inputClass="w-full !py-2 !px-[60px] !text-base !rounded-md border"
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
                 />
               </div>
               <DialogFooter>
