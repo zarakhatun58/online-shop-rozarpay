@@ -22,33 +22,67 @@ useEffect(() => {
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
   const userId = storedUser?._id || storedUser?.id;
 
-  if (!userId || !token || !orderId) return;
+  console.log("🔍 useEffect triggered");
+  console.log("✅ orderId from URL:", orderId);
+  console.log("✅ token from localStorage:", token);
+  console.log("✅ storedUser:", storedUser);
+  console.log("✅ resolved userId:", userId);
+
+  if (!userId || !token || !orderId) {
+    console.warn("⚠️ Missing userId/token/orderId, exiting useEffect");
+    return;
+  }
 
   setCurrentOrderId(orderId);
+  console.log("📌 currentOrderId set:", orderId);
 
   connectSocket(userId);
+  console.log("🔗 Socket connect called with userId:", userId);
 
   socket?.on("notification", (notif) => {
-    console.log("📩 New notification:", notif);
+    console.log("📩 Incoming socket notification:", notif);
 
     if (notif?.userId === userId) {
+      console.log("✅ Notification is for this user, fetching orders...");
       dispatch(fetchMyOrders(token));
+    } else {
+      console.log("❌ Notification not for this user");
     }
   });
 
   const checkPayment = async () => {
+    console.log("🔄 Checking payment status for order:", orderId);
+
     const res: any = await dispatch(fetchMyOrders(token));
-    const updatedOrder = res?.payload?.find((o: any) => String(o._id) === String(orderId));
+    console.log("📦 fetchMyOrders response:", res);
+
+    const updatedOrder = res?.payload?.find(
+      (o: any) => String(o._id) === String(orderId)
+    );
+    console.log("📝 Updated order found:", updatedOrder);
 
     if (updatedOrder?.status === "paid") {
+      console.log("🎉 Payment successful for order:", orderId);
+
       dispatch(clearCart());
+      console.log("🛒 Cart cleared from Redux");
+
       localStorage.removeItem("cart");
+      console.log("🛒 Cart cleared from localStorage");
 
       const title = "Payment Successful 💳";
       const message = `Your payment for order ${orderId} has been completed!`;
 
-      socket?.emit("notification", { userId, title, message, type: "success" });
+      console.log("📢 Emitting socket notification:", { userId, title, message });
 
+      socket?.emit("notification", {
+        userId,
+        title,
+        message,
+        type: "success",
+      });
+
+      console.log("🌐 Sending notification to backend API...");
       fetch(`${API_URL}/api/notification/notify-now`, {
         method: "POST",
         headers: {
@@ -56,8 +90,11 @@ useEffect(() => {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ userId, title, message, type: "success" }),
-      }).catch((err) => console.error("Notification failed:", err));
+      })
+        .then(() => console.log("✅ Notification API call successful"))
+        .catch((err) => console.error("❌ Notification API failed:", err));
     } else {
+      console.log("⏳ Order not yet paid, retrying in 3s...");
       setTimeout(checkPayment, 3000);
     }
   };
@@ -65,6 +102,7 @@ useEffect(() => {
   checkPayment();
 
   return () => {
+    console.log("🧹 Cleaning up socket listeners");
     socket?.off("notification");
   };
 }, [dispatch, searchParams, connectSocket, socket]);
@@ -72,7 +110,7 @@ useEffect(() => {
 
 
     const currentOrder = orders.find((o) => o._id === currentOrderId);
-
+console.log("🔎 currentOrder resolved:", currentOrder);
   // 1️⃣ Loading state
   if (status === "loading") {
     return <p className="text-center mt-8">Loading order...</p>;
