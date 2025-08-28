@@ -2,6 +2,7 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
 import type { RootState } from "../../store"
 import { createOrder, getMyOrders } from "../../lib/api"
 import type { CartItem } from "../cart/cartSlice"
+import { clearCart } from "../cart/cartSlice"   // ✅ import cart clear action
 
 export type Order = {
   _id: string
@@ -22,13 +23,19 @@ const initialState: OrdersState = { list: [], status: "idle" }
 export const placeOrder = createAsyncThunk<
   Order,
   { token: string; cart: CartItem[]; total: number; address: string }
->("orders/placeOrder", async ({ token, cart, total, address }) => {
+>("orders/placeOrder", async ({ token, cart, total, address }, { dispatch }) => {
   const payload = {
     items: cart.map((c) => ({ product: c._id, qty: c.qty })),
     amount: total,
     address,
   }
-  return await createOrder(token, payload)
+  const order = await createOrder(token, payload)
+
+  // ✅ Immediately clear cart after successful order creation
+  dispatch(clearCart())
+  localStorage.removeItem("cart")
+
+  return order
 })
 
 export const fetchMyOrders = createAsyncThunk<Order[], string>(

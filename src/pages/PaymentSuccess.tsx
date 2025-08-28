@@ -38,7 +38,7 @@ useEffect(() => {
 
   const checkPayment = async () => {
     const res: any = await dispatch(fetchMyOrders(token));
-    const updatedOrder = res?.payload?.find((o: any) => o._id === orderId);
+    const updatedOrder = res?.payload?.find((o: any) => String(o._id) === String(orderId));
 
     if (updatedOrder?.status === "paid") {
       dispatch(clearCart());
