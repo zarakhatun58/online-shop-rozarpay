@@ -34,7 +34,7 @@ const handleDelete = async (id: string) => {
   if (!confirm("Are you sure you want to delete this product?")) return;
 
   try {
-    const token = localStorage.getItem("authToken"); // get token as string
+    const token = localStorage.getItem("token"); 
 
     if (!token) {
       alert("You must be logged in as admin to delete a product");
@@ -45,15 +45,13 @@ const handleDelete = async (id: string) => {
       headers: { Authorization: `Bearer ${token}` },
     });
 
-    dispatch(fetchProducts()); // refresh products
+    dispatch(fetchProducts()); 
     alert("Product deleted successfully!");
   } catch (err: any) {
     console.error("Delete product error:", err.response?.data || err.message);
     alert(err.response?.data?.message || "Failed to delete product");
   }
 };
-
-
 
 
   if (status === "loading") return <p>Loading products...</p>;
