@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { clearCart } from "../features/cart/cartSlice";
 import { upsertOrder, selectOrders, selectOrdersStatus, Order } from "../features/orders/orderSlice";
 import { AppDispatch } from "../store";
@@ -16,90 +16,90 @@ export default function PaymentSuccess() {
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
 
   const steps = ["pending", "paid", "shipped", "delivered"];
-useEffect(() => {
-  console.log("useEffect started");
+  useEffect(() => {
+    console.log("useEffect started");
 
-  const orderId = searchParams.get("order_id");
-  const sessionId = searchParams.get("session_id");
-  const token = localStorage.getItem("token");
-  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-  const userId = storedUser?._id;
+    const orderId = searchParams.get("order_id");
+    const sessionId = searchParams.get("session_id");
+    const token = localStorage.getItem("token");
+    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+    const userId = storedUser?._id;
 
-  console.log("orderId:", orderId);
-  console.log("sessionId:", sessionId);
-  console.log("token:", token);
-  console.log("userId:", userId);
+    console.log("orderId:", orderId);
+    console.log("sessionId:", sessionId);
+    console.log("token:", token);
+    console.log("userId:", userId);
 
-  if (!orderId || !sessionId || !token || !userId) {
-    console.warn("Missing required parameters. Exiting polling.");
-    return;
-  }
-
-  let pollingInterval: number;
-
-  const pollOrderStatus = async () => {
-    console.log("Polling order status...");
-    try {
-      const res = await fetch(`${API_URL}/api/payments/order/${orderId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      console.log("Fetch response status:", res.status);
-
-      if (!res.ok) {
-        console.warn("Fetch failed or order not found.");
-        return;
-      }
-
-      const orderData: Order = await res.json();
-      console.log("Order data received:", orderData);
-
-      // Save order in Redux & local state
-      dispatch(upsertOrder(orderData));
-      setCurrentOrder(orderData);
-      console.log("Order saved in Redux & local state");
-
-      // Clear cart if paid
-      if (orderData.status.toLowerCase() === "paid") {
-        console.log("Order is paid! Clearing cart...");
-        dispatch(clearCart());
-        localStorage.removeItem("cart");
-
-        // Optional: send frontend notification
-        const notifyRes = await fetch(`${API_URL}/api/notification/notify-now`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            userId,
-            title: "Payment Successful 💳",
-            message: `Your payment for order ${orderId} has been received!`,
-            type: "success",
-          }),
-        });
-        console.log("Notification sent, status:", notifyRes.status);
-
-        clearInterval(pollingInterval);
-        console.log("Polling stopped after payment confirmed");
-      } else {
-        console.log("Payment not completed yet, will keep polling...");
-      }
-    } catch (err) {
-      console.error("Polling failed:", err);
+    if (!orderId || !sessionId || !token || !userId) {
+      console.warn("Missing required parameters. Exiting polling.");
+      return;
     }
-  };
 
-  pollOrderStatus(); // initial call
-  pollingInterval = window.setInterval(pollOrderStatus, 2000);
-  console.log("Polling interval started");
+    let pollingInterval: number;
 
-  return () => {
-    window.clearInterval(pollingInterval);
-    console.log("useEffect cleanup, polling cleared");
-  };
-}, [searchParams, dispatch]);
+    const pollOrderStatus = async () => {
+      console.log("Polling order status...");
+      try {
+        const res = await fetch(`${API_URL}/api/payments/order/${orderId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        console.log("Fetch response status:", res.status);
+
+        if (!res.ok) {
+          console.warn("Fetch failed or order not found.");
+          return;
+        }
+
+        const orderData: Order = await res.json();
+        console.log("Order data received:", orderData);
+
+        // Save order in Redux & local state
+        dispatch(upsertOrder(orderData));
+        setCurrentOrder(orderData);
+        console.log("Order saved in Redux & local state");
+
+        // Clear cart if paid
+        if (orderData.status.toLowerCase() === "paid") {
+          console.log("Order is paid! Clearing cart...");
+          dispatch(clearCart());
+          localStorage.removeItem("cart");
+
+          // Optional: send frontend notification
+          const notifyRes = await fetch(`${API_URL}/api/notification/notify-now`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              userId,
+              title: "Payment Successful 💳",
+              message: `Your payment for order ${orderId} has been received!`,
+              type: "success",
+            }),
+          });
+          console.log("Notification sent, status:", notifyRes.status);
+
+          clearInterval(pollingInterval);
+          console.log("Polling stopped after payment confirmed");
+        } else {
+          console.log("Payment not completed yet, will keep polling...");
+        }
+      } catch (err) {
+        console.error("Polling failed:", err);
+      }
+    };
+
+    pollOrderStatus(); // initial call
+    pollingInterval = window.setInterval(pollOrderStatus, 2000);
+    console.log("Polling interval started");
+
+    return () => {
+      window.clearInterval(pollingInterval);
+      console.log("useEffect cleanup, polling cleared");
+    };
+  }, [searchParams, dispatch]);
 
 
   if (status === "loading") return <p className="text-center mt-8">Loading order...</p>;
@@ -175,12 +175,12 @@ useEffect(() => {
         >
           📦 View All Orders
         </button>
-        <button
-          onClick={() => navigate(`/orders/${currentOrder._id}`)}
-          className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        <Link
+          to={`/track/${currentOrder._id}`}
+          className="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
         >
-          📦 Track Order
-        </button>
+          🚚 Track This Order
+        </Link>
       </div>
     </div>
   );

@@ -58,7 +58,7 @@ export default function App() {
         <Route path="/payment-cancelled" element={<PaymentCancel />} />
         <Route path="/orders" element={<OrdersPage />} />
         <Route path="/orders/:id" element={<OrderDetailsPage />} />
-        
+        <Route path="/track/:orderId" element={<TrackOrder />} />
         <Route path="/dashboard" element={<AdminDashboard />} />
       </Routes>
     </Layout>

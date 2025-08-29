@@ -3,151 +3,134 @@ import { useDispatch, useSelector } from "react-redux"
 import { useParams } from "react-router-dom"
 import type { AppDispatch } from "@/store"
 import {
-    fetchOrderById,
-    selectOrders,
-    selectOrdersStatus,
+  fetchOrderById,
+  selectOrders,
+  selectOrdersStatus,
 } from "@/features/orders/orderSlice"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "../components/ui/Button"
-import OrderProgress from "@/components/ui/OrderProgress"
+import OrderTracker from "../pages/OrderTracker" 
 
 export default function TrackOrder() {
-    const { orderId } = useParams<{ orderId: string }>()
-    const dispatch = useDispatch<AppDispatch>()
-    const orders = useSelector(selectOrders)
-    const status = useSelector(selectOrdersStatus)
+  const { orderId } = useParams<{ orderId: string }>()
+  const dispatch = useDispatch<AppDispatch>()
+  const orders = useSelector(selectOrders)
+  const status = useSelector(selectOrdersStatus)
 
-    const token = localStorage.getItem("token")
-    const order = orders.find((o) => o._id === orderId)
+  const token = localStorage.getItem("token")
+  const order = orders.find((o) => o._id === orderId)
 
-    // fetch once + auto-refresh until delivered
-    useEffect(() => {
-        if (token && orderId) {
-            dispatch(fetchOrderById({ token, orderId }))
+  // fetch once + auto-refresh until delivered
+  useEffect(() => {
+    if (token && orderId) {
+      dispatch(fetchOrderById({ token, orderId }))
 
+      let interval: ReturnType<typeof setTimeout>
+      // start polling only if not delivered
+      if (!order || order.status !== "delivered") {
+        interval = setInterval(() => {
+          dispatch(fetchOrderById({ token, orderId }))
+        }, 10000) // 10s
+      }
 
-            let interval: ReturnType<typeof setTimeout>
-            // start polling only if not delivered
-            if (!order || order.status !== "delivered") {
-                interval = setInterval(() => {
-                    dispatch(fetchOrderById({ token, orderId }))
-                }, 10000) // 10s
-            }
-
-            return () => {
-                if (interval) clearInterval(interval)
-            }
-        }
-    }, [dispatch, token, orderId, order?.status])
-
-    if (status === "loading" && !order) {
-        return <p className="text-center py-10">Loading order details...</p>
+      return () => {
+        if (interval) clearInterval(interval)
+      }
     }
+  }, [dispatch, token, orderId, order?.status])
 
-    if (!order) {
-        return <p className="text-center py-10 text-red-500">Order not found</p>
-    }
+  if (status === "loading" && !order) {
+    return <p className="text-center py-10">Loading order details...</p>
+  }
 
-    const steps = ["pending", "paid", "shipped", "delivered"]
-    const currentStepIndex = steps.indexOf(order.status)
+  if (!order) {
+    return <p className="text-center py-10 text-red-500">Order not found</p>
+  }
 
-    // --- Expected delivery date logic ---
-    const createdDate = new Date(order.createdAt)
-    let expectedDelivery: string
+  // --- Expected delivery date logic ---
+  const createdDate = new Date(order.createdAt)
+  let expectedDelivery: string
 
-    if (order.status === "delivered") {
-        expectedDelivery = `Delivered on ${new Date(order.createdAt).toLocaleDateString()}`
-    } else if (order.status === "shipped") {
-        const deliveryDate = new Date(createdDate)
-        deliveryDate.setDate(createdDate.getDate() + 2)
-        expectedDelivery = `Arriving by ${deliveryDate.toLocaleDateString()}`
-    } else {
-        const deliveryDate = new Date(createdDate)
-        deliveryDate.setDate(createdDate.getDate() + 5)
-        expectedDelivery = `Expected by ${deliveryDate.toLocaleDateString()}`
-    }
+  if (order.status === "delivered") {
+    expectedDelivery = `Delivered on ${new Date(
+      order.createdAt
+    ).toLocaleDateString()}`
+  } else if (order.status === "shipped") {
+    const deliveryDate = new Date(createdDate)
+    deliveryDate.setDate(createdDate.getDate() + 2)
+    expectedDelivery = `Arriving by ${deliveryDate.toLocaleDateString()}`
+  } else {
+    const deliveryDate = new Date(createdDate)
+    deliveryDate.setDate(createdDate.getDate() + 5)
+    expectedDelivery = `Expected by ${deliveryDate.toLocaleDateString()}`
+  }
 
-    return (
-        <div className="max-w-6xl mx-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Order summary */}
-            <Card className="p-4 rounded-2xl shadow-md">
-                <CardContent>
-                    <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
-                    <ul className="space-y-3">
-                        {order.items.map((item, idx) => (
-                            <li
-                                key={idx}
-                                className="flex justify-between items-center border-b pb-2"
-                            >
-                                <span>{item.product}</span>
-                                <span>Qty: {item.qty}</span>
-                            </li>
-                        ))}
-                    </ul>
-                    <div className="mt-4 flex justify-between text-lg font-bold">
-                        <span>Total</span>
-                        <span>₹{order.amount}</span>
-                    </div>
-                    <div className="mt-2 text-sm text-gray-500">
-                        Shipping Address: {order.address}
-                    </div>
-                </CardContent>
-            </Card>
+  return (
+    <div className="max-w-6xl mx-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Order summary */}
+      <Card className="p-4 rounded-2xl shadow-md">
+        <CardContent>
+          <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
+          <ul className="space-y-3">
+            {order.items.map((item, idx) => (
+              <li
+                key={idx}
+                className="flex justify-between items-center border-b pb-2"
+              >
+                <span>{item.product}</span>
+                <span>Qty: {item.qty}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-4 flex justify-between text-lg font-bold">
+            <span>Total</span>
+            <span>₹{order.amount}</span>
+          </div>
+          <div className="mt-2 text-sm text-gray-500">
+            Shipping Address: {order.address}
+          </div>
+        </CardContent>
+      </Card>
 
-            {/* Order tracking */}
-            <Card className="p-4 rounded-2xl shadow-md">
-                <CardContent>
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-xl font-semibold">Track Order</h2>
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                                if (token && orderId) {
-                                    dispatch(fetchOrderById({ token, orderId }))
-                                }
-                            }}
-                        >
-                            Refresh Now
-                        </Button>
-                    </div>
+      {/* Order tracking */}
+      <Card className="p-4 rounded-2xl shadow-md">
+        <CardContent>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">Track Order</h2>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                if (token && orderId) {
+                  dispatch(fetchOrderById({ token, orderId }))
+                }
+              }}
+            >
+              Refresh Now
+            </Button>
+          </div>
 
-                    <div className="flex justify-between mb-4">
-                        {steps.map((step, idx) => (
-                            <div key={step} className="flex flex-col items-center w-full">
-                                <div
-                                    className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm ${idx <= currentStepIndex
-                                        ? "bg-green-500"
-                                        : "bg-gray-300"
-                                        }`}
-                                >
-                                    {idx + 1}
-                                </div>
-                                <span className="text-xs mt-2 capitalize">{step}</span>
-                            </div>
-                        ))}
-                    </div>
+          {/* 🔥 Animated tracker here */}
+          <OrderTracker status={order.status} />
 
-                    <OrderProgress status={order.status} />
-                    {/* <OrderProgress value={((currentStepIndex + 1) / steps.length) * 100} /> */}
-                    <div className="mt-4">
-                        <Badge className="capitalize">{order.status}</Badge>
-                    </div>
+          <div className="mt-4">
+            <Badge className="capitalize">{order.status}</Badge>
+          </div>
 
-                    <div className="mt-2">
-                        {order.status === "delivered" ? (
-                            <Badge className="bg-green-500 text-white">
-                                Delivered on {new Date(order.createdAt).toLocaleDateString()}
-                            </Badge>
-                        ) : (
-                            <span className="text-sm font-medium text-blue-600">
-                                {expectedDelivery}
-                            </span>
-                        )}
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
-    )
+          <div className="mt-2">
+            {order.status === "delivered" ? (
+              <Badge className="bg-green-500 text-white">
+                Delivered on {new Date(order.createdAt).toLocaleDateString()}
+              </Badge>
+            ) : (
+              <span className="text-sm font-medium text-blue-600">
+                {expectedDelivery}
+              </span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
 }
