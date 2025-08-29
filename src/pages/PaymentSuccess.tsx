@@ -34,8 +34,9 @@ useEffect(() => {
     return;
   }
 
-  const updatePayment = async () => {
+  const handlePaymentSuccess = async () => {
     try {
+      // 1️⃣ Update payment status in backend
       const res = await fetch(`${API_URL}/api/payments/status`, {
         method: "POST",
         headers: {
@@ -47,16 +48,48 @@ useEffect(() => {
           paymentStatus: "paid",
         }),
       });
-
       const data = await res.json();
       console.log("✅ Payment status updated:", data);
+
+      // 2️⃣ Send notification
+      const notifRes = await fetch(`${API_URL}/api/notification/notify-now`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          userId,
+          title: "Payment Successful 💳",
+          message: `Your payment for order ${orderId} has been received!`,
+          type: "success",
+        }),
+      });
+      const notifData = await notifRes.json();
+      console.log("📨 Notification sent:", notifData);
+
+      // 3️⃣ Clear cart
+      dispatch(clearCart());
+      localStorage.removeItem("cart");
+
+      // 4️⃣ Fetch latest orders and update currentOrder
+      const ordersRes = await fetch(`${API_URL}/api/orders/my-orders`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const ordersData = await ordersRes.json();
+      console.log("📦 Fetched orders:", ordersData);
+
+      const current = ordersData.find((o: any) => o._id === orderId);
+      if (current) setCurrentOrderId(current._id);
+
     } catch (err) {
-      console.error("❌ Failed to update payment:", err);
+      console.error("❌ Payment handling failed:", err);
     }
   };
 
-  updatePayment();
-}, [searchParams]);
+  handlePaymentSuccess();
+}, [searchParams, dispatch]);
+
 
 
 

@@ -45,34 +45,31 @@ export default function SignInDialog() {
 
 
 const handleLogin = async (e: React.FormEvent) => {
-  e.preventDefault()
+  e.preventDefault();
 
-  const errors: typeof loginErrors = {}
-  if (!email) errors.email = "Email is required"
-  if (!password) errors.password = "Password is required"
-  setLoginErrors(errors)
-
-  if (Object.keys(errors).length > 0) return
+  const errors: typeof loginErrors = {};
+  if (!email) errors.email = "Email is required";
+  if (!password) errors.password = "Password is required";
+  setLoginErrors(errors);
+  if (Object.keys(errors).length > 0) return;
 
   try {
-    // ✅ unwrap the login thunk
-    const result = await dispatch(login({ email, password })).unwrap()
-    const { user, token } = result
+    console.log("🔍 Dispatching login thunk...");
+    const result = await dispatch(login({ email, password })).unwrap();
+    console.log("✅ Login thunk result:", result);
 
-    if (!user?._id) throw new Error("User ID missing")
-    
-    // ✅ persist user & token
-    localStorage.setItem("token", token)
-    localStorage.setItem("user", JSON.stringify(user))
+    const { user, token } = result;
+    if (!user?._id) throw new Error("User ID missing");
 
-    const userId = user._id
+    console.log("💾 Saving token & user to localStorage...");
+    localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify(user));
 
-    // ✅ ensure socket connects before moving on
-    await new Promise<void>((resolve) => {
-      connectSocket(userId, () => resolve())
-    })
+    const userId = user._id;
+    console.log("🔌 Connecting socket for user:", userId);
+    await new Promise<void>((resolve) => connectSocket(userId, () => resolve()));
 
-    // send notification
+    console.log("📨 Sending login notification...");
     await fetch(`${API_URL}/api/notification/notify-now`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -82,50 +79,58 @@ const handleLogin = async (e: React.FormEvent) => {
         message: `Welcome back, ${user.username || user.email}!`,
         type: "login",
       }),
-    })
+    });
 
-    alert("✅ Login successful! 🎉")
-    dispatch(clearCart())
-    setOpen(false)
-    navigate(user.role === "admin" ? "/dashboard" : "/")
+    console.log("🎉 Login complete, clearing cart & redirecting...");
+    alert("✅ Login successful! 🎉");
+    dispatch(clearCart());
+    setOpen(false);
+    navigate(user.role === "admin" ? "/dashboard" : "/");
   } catch (err: any) {
-    console.error("Login error:", err)
-    setLoginErrors({ password: err?.message || "Invalid credentials" })
+    console.error("Login error:", err);
+    setLoginErrors({ password: err?.message || "Invalid credentials" });
   }
-}
+};
 
 
 const handleRegister = async (e: React.FormEvent) => {
-  e.preventDefault()
-  const errors: typeof registerErrors = {}
+  e.preventDefault();
 
-  if (!username) errors.username = "Username is required"
-  if (!email) errors.email = "Email is required"
-  if (!password) errors.password = "Password is required"
+  const errors: typeof registerErrors = {};
+  if (!username) errors.username = "Username is required";
+  if (!email) errors.email = "Email is required";
+  if (!password) errors.password = "Password is required";
 
-  setRegisterErrors(errors)
-  if (Object.keys(errors).length > 0) return
+  setRegisterErrors(errors);
+  if (Object.keys(errors).length > 0) return;
 
   try {
-    // ✅ unwrap so we can directly access created user
-    const result = await dispatch(register({ username, email, password })).unwrap()
+    console.log("🔍 Dispatching register thunk...");
+    const result = await dispatch(register({ username, email, password })).unwrap();
+    console.log("✅ Register thunk result:", result);
 
-    const { user } = result
-    if (!user?._id) throw new Error("User ID missing after signup")
+    const { user, token } = result;
+    if (!user?._id) throw new Error("User ID missing after signup");
 
-    alert("Signup successful! 🎉")
-    dispatch(clearCart())
+    console.log("💾 Saving token & user to localStorage...");
+    localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify(user));
 
-    // ✅ use returned user instead of stale localStorage
-    const userId = user._id
-    connectSocket(userId)
+    console.log("🎉 Signup complete, clearing cart & connecting socket...");
+    alert("Signup successful! 🎉");
+    dispatch(clearCart());
 
-    setOpen(false)
+    const userId = user._id;
+    console.log("🔌 Connecting socket for user:", userId);
+    connectSocket(userId);
+
+    setOpen(false);
   } catch (err: any) {
-    console.error("Register error:", err)
-    setRegisterErrors({ email: err?.message || "Signup failed, try another email" })
+    console.error("Register error:", err);
+    setRegisterErrors({ email: err?.message || "Signup failed, try another email" });
   }
-}
+};
+
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
