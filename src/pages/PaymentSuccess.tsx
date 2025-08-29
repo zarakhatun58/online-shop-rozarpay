@@ -21,12 +21,17 @@ export default function PaymentSuccess() {
 
 useEffect(() => {
   const orderId = searchParams.get("order_id");
-  const sessionId = searchParams.get("session_id");
   const token = localStorage.getItem("token");
 
-  if (!orderId || !sessionId || !token || !socket) return;
+  if (!orderId || !token || !socket) return;
 
-  // 1️⃣ Fetch initial order from backend
+  // 1️⃣ Ensure socket is connected
+  if (!socket.connected) {
+    console.log("Connecting socket...");
+    connectSocket();
+  }
+
+  // 2️⃣ Fetch initial order from backend
   const fetchOrder = async () => {
     try {
       const res = await fetch(`${API_URL}/api/payments/order/${orderId}`, {
@@ -35,42 +40,43 @@ useEffect(() => {
       if (!res.ok) return;
       const orderData = await res.json();
 
-      // Update Redux store and local state
-      dispatch(upsertOrder(orderData));
       setCurrentOrder(orderData);
+      dispatch(upsertOrder(orderData));
 
-      // ❌ No need to manually send notification here!
-      // Backend already creates a notification and emits via Socket.io
+      // Clear cart if paid
+      if (orderData.status.toLowerCase() === "paid") {
+        dispatch(clearCart());
+        localStorage.removeItem("cart");
+      }
     } catch (err) {
-      console.error("🔥 Fetch initial order failed:", err);
+      console.error("🔥 Fetch order failed:", err);
     }
   };
+
   fetchOrder();
 
-  // 2️⃣ Listen for real-time updates from backend
+  // 3️⃣ Listen for real-time updates from backend
   const handleOrderUpdate = (updatedOrder: any) => {
-    if (updatedOrder.orderId === orderId) {
+    if (updatedOrder._id === orderId) {
       setCurrentOrder(updatedOrder);
       dispatch(upsertOrder(updatedOrder));
 
-      // Payment completed → clear cart automatically
+      // Clear cart if paid
       if (updatedOrder.status.toLowerCase() === "paid") {
         dispatch(clearCart());
         localStorage.removeItem("cart");
       }
-
-      // ✅ Notifications are handled automatically via SocketProvider
-      // Frontend receives `notification` events from backend
-      // and dispatches them to Redux store
     }
   };
 
   socket.on("orderUpdate", handleOrderUpdate);
 
+  // Cleanup on unmount
   return () => {
     socket.off("orderUpdate", handleOrderUpdate);
   };
-}, [searchParams, dispatch, socket]);
+}, [searchParams, socket, dispatch, connectSocket]);
+
 
 
 
