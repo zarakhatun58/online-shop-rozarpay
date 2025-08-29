@@ -16,63 +16,91 @@ export default function PaymentSuccess() {
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
 
   const steps = ["pending", "paid", "shipped", "delivered"];
+useEffect(() => {
+  console.log("useEffect started");
 
-  useEffect(() => {
-    const orderId = searchParams.get("order_id");
-    const sessionId = searchParams.get("session_id");
-    const token = localStorage.getItem("token");
-    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-    const userId = storedUser?._id;
+  const orderId = searchParams.get("order_id");
+  const sessionId = searchParams.get("session_id");
+  const token = localStorage.getItem("token");
+  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const userId = storedUser?._id;
 
-    if (!orderId || !sessionId || !token || !userId) return;
+  console.log("orderId:", orderId);
+  console.log("sessionId:", sessionId);
+  console.log("token:", token);
+  console.log("userId:", userId);
 
-    let pollingInterval: number;
+  if (!orderId || !sessionId || !token || !userId) {
+    console.warn("Missing required parameters. Exiting polling.");
+    return;
+  }
 
-    const pollOrderStatus = async () => {
-      try {
-        const res = await fetch(`${API_URL}/api/payments/order/${orderId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) return;
+  let pollingInterval: number;
 
-        const orderData: Order = await res.json();
+  const pollOrderStatus = async () => {
+    console.log("Polling order status...");
+    try {
+      const res = await fetch(`${API_URL}/api/payments/order/${orderId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-        // Save order in Redux & local state
-        dispatch(upsertOrder(orderData));
-        setCurrentOrder(orderData);
+      console.log("Fetch response status:", res.status);
 
-        // Clear cart if paid
-        if (orderData.status.toLowerCase() === "paid") {
-          dispatch(clearCart());
-          localStorage.removeItem("cart");
-
-          // Optional: send frontend notification
-          await fetch(`${API_URL}/api/notification/notify-now`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              userId,
-              title: "Payment Successful 💳",
-              message: `Your payment for order ${orderId} has been received!`,
-              type: "success",
-            }),
-          });
-
-          clearInterval(pollingInterval);
-        }
-      } catch (err) {
-        console.error("Polling failed:", err);
+      if (!res.ok) {
+        console.warn("Fetch failed or order not found.");
+        return;
       }
-    };
 
-    pollOrderStatus(); // initial call
-    pollingInterval = window.setInterval(pollOrderStatus, 2000);
+      const orderData: Order = await res.json();
+      console.log("Order data received:", orderData);
 
-    return () => window.clearInterval(pollingInterval);
-  }, [searchParams, dispatch]);
+      // Save order in Redux & local state
+      dispatch(upsertOrder(orderData));
+      setCurrentOrder(orderData);
+      console.log("Order saved in Redux & local state");
+
+      // Clear cart if paid
+      if (orderData.status.toLowerCase() === "paid") {
+        console.log("Order is paid! Clearing cart...");
+        dispatch(clearCart());
+        localStorage.removeItem("cart");
+
+        // Optional: send frontend notification
+        const notifyRes = await fetch(`${API_URL}/api/notification/notify-now`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            userId,
+            title: "Payment Successful 💳",
+            message: `Your payment for order ${orderId} has been received!`,
+            type: "success",
+          }),
+        });
+        console.log("Notification sent, status:", notifyRes.status);
+
+        clearInterval(pollingInterval);
+        console.log("Polling stopped after payment confirmed");
+      } else {
+        console.log("Payment not completed yet, will keep polling...");
+      }
+    } catch (err) {
+      console.error("Polling failed:", err);
+    }
+  };
+
+  pollOrderStatus(); // initial call
+  pollingInterval = window.setInterval(pollOrderStatus, 2000);
+  console.log("Polling interval started");
+
+  return () => {
+    window.clearInterval(pollingInterval);
+    console.log("useEffect cleanup, polling cleared");
+  };
+}, [searchParams, dispatch]);
+
 
   if (status === "loading") return <p className="text-center mt-8">Loading order...</p>;
 
