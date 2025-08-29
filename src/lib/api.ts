@@ -107,6 +107,22 @@ export async function updateOrderPaymentStatus(token: string, payload: { orderId
   return data;
 }
 
+export async function confirmOrderPayment(
+  token: string,
+  sessionId: string,
+  paymentStatus: string = "paid",
+  paymentId?: string
+) {
+  const { data } = await axios.post(
+    `${API_URL}/api/payments/confirm`,
+    { sessionId, paymentStatus, paymentId },
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+  return data;
+}
+
 export async function getOrders(token: string) {
   const { data } = await axios.get(`${API_URL}/api/payments/all`, {
     headers: { Authorization: `Bearer ${token}` },
