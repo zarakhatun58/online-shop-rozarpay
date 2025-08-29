@@ -29,10 +29,11 @@ const initialState: NotificationState = {
 // 🔄 Async Thunks
 export const getNotifications = createAsyncThunk(
   "notifications/getAll",
-  async ({ token }: { token: string }) => {
-    return await fetchNotifications(token);
+  async ({ token, userId }: { token: string; userId: string }) => {
+    return await fetchNotifications(token, userId);
   }
 );
+
 
 export const readNotification = createAsyncThunk(
   "notifications/readOne",

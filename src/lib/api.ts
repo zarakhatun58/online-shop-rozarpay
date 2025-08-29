@@ -137,8 +137,8 @@ export async function getOrderById(token: string, orderId: string) {
 }
 
 // --- Notification ---
-export const fetchNotifications = async (token: string) => {
-  const res = await axios.get(`${API_URL}/api/notification`, {
+export const fetchNotifications = async (token: string, userId: string) => {
+  const res = await axios.get(`${API_URL}/api/notification/${userId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return res.data;
