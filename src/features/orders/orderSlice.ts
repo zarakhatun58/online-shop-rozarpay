@@ -48,7 +48,16 @@ export const fetchMyOrders = createAsyncThunk<Order[], string>(
 const orderSlice = createSlice({
   name: "orders",
   initialState,
-  reducers: {},
+  reducers: {
+    upsertOrder: (state, action: { payload: Order }) => {
+    const idx = state.list.findIndex((o) => o._id === action.payload._id);
+    if (idx >= 0) {
+      state.list[idx] = action.payload;
+    } else {
+      state.list.push(action.payload);
+    }
+  },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(placeOrder.pending, (s) => {
@@ -79,3 +88,4 @@ export const selectOrdersStatus = (state: RootState): OrdersState["status"] =>
   state.orders.status
 
 export default orderSlice.reducer
+export const { upsertOrder } = orderSlice.actions;
