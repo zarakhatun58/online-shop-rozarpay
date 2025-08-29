@@ -21,17 +21,14 @@ export default function TrackOrder() {
   const token = localStorage.getItem("token")
   const order = orders.find((o) => o._id === orderId)
 
-  // fetch once + auto-refresh until delivered
   useEffect(() => {
     if (token && orderId) {
       dispatch(fetchOrderById({ token, orderId }))
-
       let interval: ReturnType<typeof setTimeout>
-      // start polling only if not delivered
       if (!order || order.status !== "delivered") {
         interval = setInterval(() => {
           dispatch(fetchOrderById({ token, orderId }))
-        }, 10000) // 10s
+        }, 5000) 
       }
 
       return () => {
@@ -48,7 +45,6 @@ export default function TrackOrder() {
     return <p className="text-center py-10 text-red-500">Order not found</p>
   }
 
-  // --- Expected delivery date logic ---
   const createdDate = new Date(order.createdAt)
   let expectedDelivery: string
 
@@ -68,7 +64,6 @@ export default function TrackOrder() {
 
   return (
     <div className="max-w-6xl mx-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* Order summary */}
       <Card className="p-4 rounded-2xl shadow-md">
         <CardContent>
           <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
@@ -92,8 +87,6 @@ export default function TrackOrder() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Order tracking */}
       <Card className="p-4 rounded-2xl shadow-md">
         <CardContent>
           <div className="flex items-center justify-between mb-4">
@@ -110,8 +103,6 @@ export default function TrackOrder() {
               Refresh Now
             </Button>
           </div>
-
-          {/* 🔥 Animated tracker here */}
           <OrderTracker status={order.status} />
 
           <div className="mt-4">

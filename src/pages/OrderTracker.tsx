@@ -60,10 +60,10 @@ export default function OrderTracker({
                   animate={{
                     width:
                       idx < animatedStepIdx
-                        ? "100%" // already completed
+                        ? "100%" 
                         : idx === animatedStepIdx
-                        ? "100%" // animate current one
-                        : "0%", // upcoming
+                        ? "100%" 
+                        : "0%", 
                   }}
                   transition={{
                     duration: idx === animatedStepIdx ? 5 : 0.8,
