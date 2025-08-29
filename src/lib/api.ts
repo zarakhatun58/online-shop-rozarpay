@@ -130,7 +130,7 @@ export async function getOrders(token: string) {
   return data;
 }
 export async function getOrderById(token: string, orderId: string) {
-  const { data } = await axios.get(`${API_URL}/api/order/${orderId}`, {
+  const { data } = await axios.get(`${API_URL}/api/payments/order/${orderId}`, {
     headers: { Authorization: `Bearer ${token}` },
   })
   return data
