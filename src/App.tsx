@@ -14,6 +14,7 @@ import { useDispatch } from 'react-redux'
 import { clearCart } from './features/cart/cartSlice'
 import AdminDashboard from './pages/AdminDashboard'
 import OrderDetailsPage from './pages/OrderDetailsPage'
+import TrackOrder from './pages/TrackOrder'
 
 export const stripePromise = loadStripe("pk_test_51RaaB2QpJYqNVrlfiZmHRPSkE1fLvrwQv9ZmRS2dxGB2Udsp6rxjPyWyYwVICMBWEZcqC2AaqmfvLtxx8GI8yd1T00WvxWAttL");
 
@@ -57,6 +58,7 @@ export default function App() {
         <Route path="/payment-cancelled" element={<PaymentCancel />} />
         <Route path="/orders" element={<OrdersPage />} />
         <Route path="/orders/:id" element={<OrderDetailsPage />} />
+        
         <Route path="/dashboard" element={<AdminDashboard />} />
       </Routes>
     </Layout>

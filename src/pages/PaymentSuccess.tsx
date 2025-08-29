@@ -34,63 +34,64 @@ useEffect(() => {
     return;
   }
 
-  const handlePaymentSuccess = async () => {
+  // In browser, setInterval returns a number, not NodeJS.Timeout
+  let pollingInterval: number;
+
+  const pollOrderStatus = async () => {
     try {
-      // 1️⃣ Update payment status in backend
-      const res = await fetch(`${API_URL}/api/payments/status`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          sessionId,
-          paymentStatus: "paid",
-        }),
-      });
-      const data = await res.json();
-      console.log("✅ Payment status updated:", data);
-
-      // 2️⃣ Send notification
-      const notifRes = await fetch(`${API_URL}/api/notification/notify-now`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          userId,
-          title: "Payment Successful 💳",
-          message: `Your payment for order ${orderId} has been received!`,
-          type: "success",
-        }),
-      });
-      const notifData = await notifRes.json();
-      console.log("📨 Notification sent:", notifData);
-
-      // 3️⃣ Clear cart
-      dispatch(clearCart());
-      localStorage.removeItem("cart");
-
-      // 4️⃣ Fetch latest orders and update currentOrder
-      const ordersRes = await fetch(`${API_URL}/api/orders/my-orders`, {
+      // 1️⃣ Check order status from backend
+      const res = await fetch(`${API_URL}/api/payments/order/${orderId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const ordersData = await ordersRes.json();
-      console.log("📦 Fetched orders:", ordersData);
 
-      const current = ordersData.find((o: any) => o._id === orderId);
-      if (current) setCurrentOrderId(current._id);
+      if (!res.ok) {
+        console.warn("⚠️ Order not found yet, retrying...");
+        return;
+      }
 
+      const orderData = await res.json();
+      console.log("📦 Polled order data:", orderData);
+
+      // 2️⃣ If order is paid, proceed
+      if (orderData.status.toLowerCase() === "paid") {
+        setCurrentOrderId(orderData._id);
+
+        // 3️⃣ Clear cart
+        dispatch(clearCart());
+        localStorage.removeItem("cart");
+
+        // 4️⃣ Optional: send frontend notification
+        const notifRes = await fetch(`${API_URL}/api/notification/notify-now`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            userId,
+            title: "Payment Successful 💳",
+            message: `Your payment for order ${orderId} has been received!`,
+            type: "success",
+          }),
+        });
+        const notifData = await notifRes.json();
+        console.log("📨 Notification sent:", notifData);
+
+        // 5️⃣ Stop polling
+        clearInterval(pollingInterval);
+      }
     } catch (err) {
-      console.error("❌ Payment handling failed:", err);
+      console.error("❌ Polling failed:", err);
     }
   };
 
-  handlePaymentSuccess();
+  // Start polling immediately and then every 2 seconds
+  pollOrderStatus(); // initial call
+  pollingInterval = window.setInterval(pollOrderStatus, 2000);
+
+  // Cleanup on unmount
+  return () => window.clearInterval(pollingInterval);
 }, [searchParams, dispatch]);
-
-
 
 
 
@@ -118,6 +119,12 @@ useEffect(() => {
           className="mt-6 px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
           📦 Track Orders
+        </button>
+        <button
+          onClick={() => navigate(`/orders/${currentOrderId}`)}
+          className="mt-6 px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
+          📦 Track step order
         </button>
       </div>
     );
