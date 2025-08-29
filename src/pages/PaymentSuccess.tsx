@@ -6,6 +6,7 @@ import { upsertOrder, selectOrders, selectOrdersStatus, Order } from "../feature
 import { AppDispatch } from "../store";
 import { API_URL } from "@/lib/api";
 import { Card } from "@/components/ui/card";
+import { useSocket } from '@/lib/SocketProvider';
 
 
 export default function PaymentSuccess() {
@@ -15,98 +16,62 @@ export default function PaymentSuccess() {
   const orders = useSelector(selectOrders);
   const status = useSelector(selectOrdersStatus);
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
-
+ const { connectSocket, socket } = useSocket();
   const steps = ["pending", "paid", "shipped", "delivered"];
-useEffect(() => {
-  console.log("🔄 PaymentSuccess useEffect started");
 
+useEffect(() => {
   const orderId = searchParams.get("order_id");
   const sessionId = searchParams.get("session_id");
   const token = localStorage.getItem("token");
-  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-  const userId = storedUser?._id;
 
-  if (!orderId || !sessionId || !token || !userId) {
-    console.warn("⚠️ Missing orderId, sessionId, token or userId. Exiting polling.");
-    return;
-  }
+  if (!orderId || !sessionId || !token || !socket) return;
 
-  let pollingInterval: number;
-
-  const pollOrderStatus = async () => {
+  // 1️⃣ Fetch initial order from backend
+  const fetchOrder = async () => {
     try {
-      console.log("📡 Polling order status for:", orderId);
-
-      // Step 1: check order status
       const res = await fetch(`${API_URL}/api/payments/order/${orderId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      if (!res.ok) return;
+      const orderData = await res.json();
 
-      if (!res.ok) {
-        console.warn("❌ Order not found or fetch failed.");
-        return;
-      }
-
-      const orderData: Order = await res.json();
-      console.log("📦 Order data received:", orderData);
-
+      // Update Redux store and local state
       dispatch(upsertOrder(orderData));
       setCurrentOrder(orderData);
 
-      // Step 2: if still pending → keep polling
-      if (orderData.status.toLowerCase() === "pending") {
-        return;
-      }
+      // ❌ No need to manually send notification here!
+      // Backend already creates a notification and emits via Socket.io
+    } catch (err) {
+      console.error("🔥 Fetch initial order failed:", err);
+    }
+  };
+  fetchOrder();
 
-      // Step 3: if paid → confirm payment + cleanup
-      if (orderData.status.toLowerCase() === "paid") {
-        console.log("✅ Order marked as paid. Confirming payment...");
+  // 2️⃣ Listen for real-time updates from backend
+  const handleOrderUpdate = (updatedOrder: any) => {
+    if (updatedOrder.orderId === orderId) {
+      setCurrentOrder(updatedOrder);
+      dispatch(upsertOrder(updatedOrder));
 
-        // Confirm order payment via backend API
-        await fetch(`${API_URL}/api/payments/confirm`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ orderId, sessionId }),
-        });
-
-        // Clear cart
+      // Payment completed → clear cart automatically
+      if (updatedOrder.status.toLowerCase() === "paid") {
         dispatch(clearCart());
         localStorage.removeItem("cart");
-
-        // Send notification
-        await fetch(`${API_URL}/api/notification/notify-now`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            userId,
-            title: "Payment Successful 💳",
-            message: `Your payment for order ${orderId} has been received!`,
-            type: "success",
-          }),
-        });
-
-        clearInterval(pollingInterval);
-        console.log("🛑 Polling stopped after confirming payment.");
       }
-    } catch (err) {
-      console.error("🔥 Polling error:", err);
+
+      // ✅ Notifications are handled automatically via SocketProvider
+      // Frontend receives `notification` events from backend
+      // and dispatches them to Redux store
     }
   };
 
-  pollOrderStatus(); // initial check
-  pollingInterval = window.setInterval(pollOrderStatus, 2000);
+  socket.on("orderUpdate", handleOrderUpdate);
 
   return () => {
-    window.clearInterval(pollingInterval);
-    console.log("🧹 useEffect cleanup: polling cleared");
+    socket.off("orderUpdate", handleOrderUpdate);
   };
-}, [searchParams, dispatch]);
+}, [searchParams, dispatch, socket]);
+
 
 
 
