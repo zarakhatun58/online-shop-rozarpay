@@ -69,7 +69,10 @@ const { notifications } = useSelector((state: RootState) => state.notifications)
   // 🗂 Fetch notifications on mount
 useEffect(() => {
   if (token) {
-    dispatch(getNotifications({ token }));
+    dispatch(getNotifications({
+      token,
+      userId
+    }));
   }
 }, [dispatch, token]);
 
