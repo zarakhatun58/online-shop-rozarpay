@@ -44,69 +44,89 @@ export default function SignInDialog() {
   const navigate = useNavigate()
 
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
+const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault()
 
-    const errors: typeof loginErrors = {}
-    if (!email) errors.email = "Email is required"
-    if (!password) errors.password = "Password is required"
-    setLoginErrors(errors)
+  const errors: typeof loginErrors = {}
+  if (!email) errors.email = "Email is required"
+  if (!password) errors.password = "Password is required"
+  setLoginErrors(errors)
 
-    if (Object.keys(errors).length > 0) return
+  if (Object.keys(errors).length > 0) return
 
-    try {
-      const result = await dispatch(login({ email, password })).unwrap()
-      const { user } = result
+  try {
+    // ✅ unwrap the login thunk
+    const result = await dispatch(login({ email, password })).unwrap()
+    const { user, token } = result
 
-      if (!user?._id) throw new Error("User ID missing")
-      const userId = user._id
-      await new Promise<void>((resolve) => {
-        connectSocket(userId, () => resolve()) 
-      })
+    if (!user?._id) throw new Error("User ID missing")
+    
+    // ✅ persist user & token
+    localStorage.setItem("token", token)
+    localStorage.setItem("user", JSON.stringify(user))
 
-      await fetch(`${API_URL}/api/notification/notify-now`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          title: "Login Successful",
-          message: `Welcome back, ${user.username || user.email}!`,
-          type: "login",
-        }),
-      })
+    const userId = user._id
 
-      alert("✅ Login successful! 🎉")
-      dispatch(clearCart())
-      setOpen(false)
-      navigate(user.role === "admin" ? "/dashboard" : "/") // redirect accordingly
-    } catch (err: any) {
-      console.error("Login error:", err)
-      setLoginErrors({ password: err?.message || "Invalid credentials" })
-    }
+    // ✅ ensure socket connects before moving on
+    await new Promise<void>((resolve) => {
+      connectSocket(userId, () => resolve())
+    })
+
+    // send notification
+    await fetch(`${API_URL}/api/notification/notify-now`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId,
+        title: "Login Successful",
+        message: `Welcome back, ${user.username || user.email}!`,
+        type: "login",
+      }),
+    })
+
+    alert("✅ Login successful! 🎉")
+    dispatch(clearCart())
+    setOpen(false)
+    navigate(user.role === "admin" ? "/dashboard" : "/")
+  } catch (err: any) {
+    console.error("Login error:", err)
+    setLoginErrors({ password: err?.message || "Invalid credentials" })
   }
+}
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const errors: typeof registerErrors = {}
 
-    if (!username) errors.username = "Username is required"
-    if (!email) errors.email = "Email is required"
-    if (!password) errors.password = "Password is required"
+const handleRegister = async (e: React.FormEvent) => {
+  e.preventDefault()
+  const errors: typeof registerErrors = {}
 
-    setRegisterErrors(errors)
-    if (Object.keys(errors).length > 0) return
-    try {
-      await dispatch(register({ username, email, password }))
-      alert("Signup successful! 🎉");
-      dispatch(clearCart())
-      const user = JSON.parse(localStorage.getItem("user") || "{}");
-      const userId = user?.id || user?._id;
-      if (userId) connectSocket(userId);
-      setOpen(false)
-    } catch {
-      setRegisterErrors({ email: "Signup failed, try another email" })
-    }
+  if (!username) errors.username = "Username is required"
+  if (!email) errors.email = "Email is required"
+  if (!password) errors.password = "Password is required"
+
+  setRegisterErrors(errors)
+  if (Object.keys(errors).length > 0) return
+
+  try {
+    // ✅ unwrap so we can directly access created user
+    const result = await dispatch(register({ username, email, password })).unwrap()
+
+    const { user } = result
+    if (!user?._id) throw new Error("User ID missing after signup")
+
+    alert("Signup successful! 🎉")
+    dispatch(clearCart())
+
+    // ✅ use returned user instead of stale localStorage
+    const userId = user._id
+    connectSocket(userId)
+
+    setOpen(false)
+  } catch (err: any) {
+    console.error("Register error:", err)
+    setRegisterErrors({ email: err?.message || "Signup failed, try another email" })
   }
+}
+
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -137,8 +157,8 @@ export default function SignInDialog() {
       alert("Password reset successful. Please log in.");
       setOtpSent(false);
       setOtpVerified(false);
-       setResetPasswordOpen(false);
-       setNewPassword("")
+      setResetPasswordOpen(false);
+      setNewPassword("")
     } catch (err: any) {
       alert(err || "Failed to reset password");
     }
